@@ -28,26 +28,41 @@ const NotificationsWidget = ({ currentUser }) => {
 
   useEffect(() => {
     if (alerts.length > 0) {
-      // Filtrar solo alertas que sean de hoy (simplificado)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
+      // Mostrar TODAS las alertas activas como "de hoy" si no tienen fecha especificada
       const todayAlerts = alerts.filter(alert => {
-        if (!alert.date) return false;
-        
-        const alertDate = new Date(alert.date);
-        // Si alert.date es string, intentar parsearlo
-        if (typeof alert.date === 'string') {
-          const parsed = new Date(alert.date);
-          alertDate.setHours(0, 0, 0, 0);
-          return parsed >= today && parsed < tomorrow;
+        // Si no tiene fecha, mostrarla como alerta de hoy
+        if (!alert.date) {
+          console.log('⚠️ Alerta sin fecha:', alert);
+          return true;
         }
         
-        alertDate.setHours(0, 0, 0, 0);
-        return alertDate >= today && alertDate < tomorrow;
+        // Si tiene fecha, verificar si es hoy
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        try {
+          // Intentar parsear la fecha
+          let alertDate;
+          if (typeof alert.date === 'string') {
+            alertDate = new Date(alert.date);
+          } else if (alert.date instanceof Date) {
+            alertDate = alert.date;
+          } else if (alert.date?.toDate) {
+            alertDate = alert.date.toDate();
+          } else {
+            console.log('⚠️ Formato de fecha desconocido:', alert.date, typeof alert.date);
+            return true; // Mostrar si no podemos parsear
+          }
+          
+          alertDate.setHours(0, 0, 0, 0);
+          return alertDate >= today && alertDate < tomorrow;
+        } catch (err) {
+          console.error('❌ Error parsing date:', err, alert.date);
+          return true; // Mostrar si hay error
+        }
       });
       
       console.log('📅 Alertas de hoy:', todayAlerts);
