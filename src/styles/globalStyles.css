@@ -746,6 +746,62 @@ select:focus {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
+/* FILTERS & TABS                                                         */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+.filters-section {
+  margin-bottom: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.filter-tab {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  position: relative;
+}
+
+.filter-tab:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-secondary);
+  background: rgba(129, 140, 248, 0.05);
+  transform: translateY(-2px);
+}
+
+.filter-tab.active {
+  background: var(--gradient-primary);
+  border-color: var(--accent-primary);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(129, 140, 248, 0.3);
+}
+
+.filter-tab.active:hover {
+  box-shadow: 0 6px 16px rgba(129, 140, 248, 0.4);
+  transform: translateY(-3px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
 /* SCROLLBAR                                                              */
 /* ═══════════════════════════════════════════════════════════════════════ */
 

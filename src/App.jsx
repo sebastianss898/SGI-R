@@ -11,6 +11,7 @@ import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import { PERMISSIONS } from './utils/roles';
 import './styles/globalStyles.css';
+import AlertsManagement from './components/AlertsManagement';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -99,7 +100,15 @@ function App() {
             <UserManagement />
           </ProtectedRoute>
         );
-
+        case 'alertas':
+  return (
+    <ProtectedRoute 
+      requiredPermission={PERMISSIONS.VIEW_ALERTS}
+      userRole={currentUser.role}
+    >
+      <AlertsManagement currentUser={currentUser} />
+    </ProtectedRoute>
+  );
       default:
         return <Dashboard />;
     }

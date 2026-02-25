@@ -9,7 +9,7 @@ import {
   FaUserCircle,
   FaHistory,
   FaUsers,
-  FaChartLine
+  FaChartLine 
 } from 'react-icons/fa';
 import { hasPermission, PERMISSIONS, ROLE_LABELS } from '../utils/roles';
 import '../styles/sidebar.css';
@@ -47,6 +47,12 @@ const Sidebar = ({ isOpen, currentView, setCurrentView, currentUser }) => {
       icon: <FaUsers />, 
       permission: PERMISSIONS.CREATE_USER,
       adminOnly: true
+    },
+    { 
+    id: "alertas", 
+    label: "Alertas", 
+    icon: <FaBell />, 
+    permission: PERMISSIONS.VIEW_ALERTS 
     },
   ];
 

@@ -10,18 +10,10 @@ import {
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../utils/roles';
 import '../styles/header.css';
+import NotificationsWidget from './NotificationsWidget';
 
 const Header = ({ toggleSidebar, sidebarOpen, currentUser, onLogout }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-
-  const notifications = [
-    { id: 1, text: 'Nuevo turno entregado', time: '5 min', unread: true },
-    { id: 2, text: 'Check-in habitación 305', time: '15 min', unread: true },
-    { id: 3, text: 'Factura emitida #1234', time: '1 hora', unread: false },
-  ];
-
-  const unreadCount = notifications.filter(n => n.unread).length;
 
   const handleLogout = () => {
     if (window.confirm('¿Estás seguro que deseas cerrar sesión?')) {
@@ -45,55 +37,12 @@ const Header = ({ toggleSidebar, sidebarOpen, currentUser, onLogout }) => {
       </div>
 
       <div className="header-right">
-        {/* Notifications */}
-        <div className="header-item">
-          <button 
-            className="icon-btn"
-            onClick={() => {
-              setShowNotifications(!showNotifications);
-              setShowUserMenu(false);
-            }}
-          >
-            <FaBell />
-            {unreadCount > 0 && (
-              <span className="notification-badge">{unreadCount}</span>
-            )}
-          </button>
-
-          {showNotifications && (
-            <div className="dropdown-menu notifications-menu">
-              <div className="dropdown-header">
-                <h4>Notificaciones</h4>
-                <button className="mark-read-btn">Marcar todas leídas</button>
-              </div>
-              <div className="notifications-list">
-                {notifications.map(notif => (
-                  <div 
-                    key={notif.id} 
-                    className={`notification-item ${notif.unread ? 'unread' : ''}`}
-                  >
-                    <div className="notification-content">
-                      <p>{notif.text}</p>
-                      <span className="notification-time">{notif.time}</span>
-                    </div>
-                    {notif.unread && <span className="unread-dot"></span>}
-                  </div>
-                ))}
-              </div>
-              <div className="dropdown-footer">
-                <button className="view-all-btn">Ver todas</button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* User Menu */}
+        <NotificationsWidget currentUser={currentUser} />
         <div className="header-item user-menu-wrapper">
           <button 
             className="user-menu-btn"
             onClick={() => {
               setShowUserMenu(!showUserMenu);
-              setShowNotifications(false);
             }}
           >
             <div className="user-avatar">
@@ -144,12 +93,11 @@ const Header = ({ toggleSidebar, sidebarOpen, currentUser, onLogout }) => {
       </div>
 
       {/* Overlay para cerrar dropdowns */}
-      {(showUserMenu || showNotifications) && (
+      {showUserMenu && (
         <div 
           className="header-overlay"
           onClick={() => {
             setShowUserMenu(false);
-            setShowNotifications(false);
           }}
         ></div>
       )}

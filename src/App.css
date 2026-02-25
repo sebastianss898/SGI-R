@@ -96,10 +96,6 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.statCardMiddle {
-  /* No additional margin needed for flexbox */
-}
-
 .statNumber {
   font-size: 32px;
   font-weight: bold;

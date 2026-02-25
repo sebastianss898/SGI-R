@@ -162,9 +162,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-      <div class="utils-section">
 
-      </div>
       {/* Filters */}
       <div className="filters-section">
         <div className="filter-tabs">
