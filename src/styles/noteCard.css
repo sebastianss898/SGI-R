@@ -1,0 +1,339 @@
+/* Note Card Styles */
+
+.note-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.note-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+/* ─── Header ─── */
+.note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.note-category {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.note-category svg {
+    font-size: 1.1rem;
+}
+
+.note-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.priority-badge,
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+}
+
+/* ─── Content ─── */
+.note-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.note-description {
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ─── Country Section ─── */
+.note-country-section {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 12px;
+}
+
+.add-country-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f5f5f5;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    justify-content: center;
+}
+
+.add-country-btn:hover {
+    background: #ebebeb;
+    border-color: #999;
+    color: #333;
+}
+
+.add-country-btn svg {
+    font-size: 1rem;
+}
+
+.country-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.country-flag-display {
+    width: 36px;
+    height: 27px;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.country-info-display {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.country-name-display {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.cioc-code-display {
+    font-size: 0.75rem;
+    color: #666;
+    font-family: 'Courier New', monospace;
+}
+
+.edit-country-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-country-btn:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.country-search-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cancel-country-btn {
+    padding: 8px 16px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cancel-country-btn:hover {
+    background: #e0e0e0;
+    border-color: #ccc;
+    color: #333;
+}
+
+/* ─── Footer ─── */
+.note-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+    font-size: 0.85rem;
+    color: #666;
+    flex-wrap: wrap;
+}
+
+.note-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.note-date,
+.note-time,
+.note-user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.note-date svg,
+.note-time svg,
+.note-user svg {
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+
+/* ─── Actions ─── */
+.note-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 8px;
+}
+
+.delete-note-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: none;
+    border: 1px solid #ff4444;
+    border-radius: 6px;
+    color: #ff4444;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.delete-note-btn:hover {
+    background: #ff4444;
+    color: #fff;
+}
+
+/* ─── Dark Theme Override (si usas tema oscuro) ─── */
+.dark-theme .note-card {
+    background: #13131d;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .note-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.dark-theme .note-title {
+    color: #e0e0f0;
+}
+
+.dark-theme .note-description {
+    color: #b0b0c0;
+}
+
+.dark-theme .note-footer {
+    border-top-color: #2e2e42;
+    color: #9090b0;
+}
+
+.dark-theme .note-country-section {
+    border-top-color: #2e2e42;
+}
+
+.dark-theme .add-country-btn {
+    background: #1e1e2e;
+    border-color: #3a3a5a;
+    color: #9090b0;
+}
+
+.dark-theme .add-country-btn:hover {
+    background: #252535;
+    border-color: #5a5a7a;
+    color: #c0c0d0;
+}
+
+.dark-theme .country-display {
+    background: #1e1e2e;
+    border-color: #2e2e42;
+}
+
+.dark-theme .country-name-display {
+    color: #e0e0f0;
+}
+
+.dark-theme .cioc-code-display {
+    color: #9090b0;
+}
+
+.dark-theme .edit-country-btn {
+    color: #9090b0;
+}
+
+.dark-theme .edit-country-btn:hover {
+    background: #2e2e42;
+    color: #c0c0d0;
+}
+
+.dark-theme .cancel-country-btn {
+    background: #1e1e2e;
+    border-color: #3a3a5a;
+    color: #9090b0;
+}
+
+.dark-theme .cancel-country-btn:hover {
+    background: #252535;
+    border-color: #5a5a7a;
+    color: #c0c0d0;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+    .note-card {
+        padding: 16px;
+    }
+
+    .note-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .note-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .note-meta {
+        width: 100%;
+    }
+}

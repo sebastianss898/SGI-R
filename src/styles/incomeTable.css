@@ -1,0 +1,304 @@
+/* src/styles/incomeTable.css */
+
+.income-table-container {
+  margin-bottom: 20px;
+}
+
+.income-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212121;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #1A237E;
+}
+
+/* FORMULARIO */
+.income-form {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.income-form-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 1fr 120px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.income-input {
+  padding: 10px 12px;
+  border: 2px solid #E0E0E0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #212121;
+  transition: all 0.3s;
+  outline: none;
+  background: white;
+}
+
+.income-input:focus {
+  border-color: #1A237E;
+  box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
+}
+
+.room-input {
+  text-align: center;
+  font-weight: 600;
+}
+
+.amount-input {
+  text-align: right;
+  font-weight: 600;
+}
+
+.income-input::placeholder {
+  color: #BDBDBD;
+}
+
+/* Ocultar flechas de input number */
+.amount-input::-webkit-outer-spin-button,
+.amount-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.amount-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.btn-add-income {
+  padding: 10px 16px;
+  background: #1A237E;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.btn-add-income:hover:not(:disabled) {
+  background: #534BAE;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);
+}
+
+.btn-add-income:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* TABLA */
+.income-table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.income-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 14px;
+}
+
+.income-table thead {
+  background: linear-gradient(135deg, #1A237E 0%, #534BAE 100%);
+  color: white;
+}
+
+.income-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.income-table tbody tr {
+  border-bottom: 1px solid #E0E0E0;
+  transition: background 0.3s;
+}
+
+.income-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.income-table td {
+  padding: 14px 16px;
+}
+
+.room-cell {
+  font-weight: 600;
+  color: #1A237E;
+  text-align: center;
+}
+
+.concept-cell,
+.payment-cell {
+  text-align: center;
+}
+
+.concept-badge,
+.payment-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Badges de concepto */
+.concept-badge.alojamiento {
+  background: #E3F2FD;
+  color: #1976D2;
+}
+
+.concept-badge.iva {
+  background: #FFF3E0;
+  color: #F57C00;
+}
+
+.concept-badge.servicios {
+  background: #F3E5F5;
+  color: #7B1FA2;
+}
+
+.concept-badge.restaurante {
+  background: #E8F5E9;
+  color: #388E3C;
+}
+
+.concept-badge.bar {
+  background: #FCE4EC;
+  color: #C2185B;
+}
+
+.concept-badge.lavanderia {
+  background: #E0F2F1;
+  color: #00796B;
+}
+
+.concept-badge.otros {
+  background: #ECEFF1;
+  color: #455A64;
+}
+
+/* Badges de método de pago */
+.payment-badge.efectivo {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.payment-badge.voucher {
+  background: #E3F2FD;
+  color: #1565C0;
+}
+
+.payment-badge.transferencia {
+  background: #F3E5F5;
+  color: #6A1B9A;
+}
+
+.payment-badge.tarjeta {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.amount-cell {
+  text-align: right;
+  font-weight: 700;
+  color: #2E7D32;
+  font-size: 15px;
+}
+
+.actions-cell {
+  text-align: center;
+}
+
+.btn-delete-income {
+  background: none;
+  border: none;
+  color: #F44336;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-delete-income:hover {
+  background: #FFEBEE;
+  transform: scale(1.1);
+}
+
+/* FOOTER CON TOTAL */
+.income-table tfoot {
+  background: #f8f9fa;
+  border-top: 3px solid #1A237E;
+}
+
+.total-row td {
+  padding: 16px;
+  font-weight: 700;
+}
+
+.total-label {
+  text-align: right;
+  font-size: 16px;
+  color: #212121;
+}
+
+.total-amount {
+  text-align: right;
+  font-size: 20px;
+  color: #1A237E;
+}
+
+/* ESTADO VACÍO */
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #E0E0E0;
+}
+
+.empty-state p {
+  color: #757575;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .income-form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .income-table-wrapper {
+    overflow-x: auto;
+  }
+  
+  .income-table {
+    min-width: 600px;
+  }
+  
+  .btn-add-income {
+    width: 100%;
+    justify-content: center;
+  }
+}

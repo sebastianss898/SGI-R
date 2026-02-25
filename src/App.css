@@ -1,0 +1,251 @@
+/* App.css - Estilos para HomeScreen */
+
+* {
+  box-sizing: border-box;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #F5F7FA;
+  overflow: hidden;
+}
+
+/* Header */
+.header {
+  background-color: #1A237E;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom-left-radius: 25px;
+  border-bottom-right-radius: 25px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.greeting {
+  font-size: 28px;
+  font-weight: bold;
+  color: #FFF;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #B3B3FF;
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.notificationButton {
+  position: relative;
+  padding: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFF;
+  transition: opacity 0.3s ease;
+}
+
+.notificationButton:hover {
+  opacity: 0.8;
+}
+
+.badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: #FF5252;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.badgeText {
+  color: #FFF;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* Stats Container */
+.statsContainer {
+  display: flex;
+  gap: 15px;
+  padding: 0 20px;
+  margin-top: -30px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 10;
+}
+
+.statCard {
+  flex: 1;
+  background-color: #FFF;
+  border-radius: 15px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.statCardMiddle {
+  /* No additional margin needed for flexbox */
+}
+
+.statNumber {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1A237E;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #757575;
+  margin-top: 4px;
+}
+
+/* Scroll View */
+.scrollView {
+  flex: 1;
+  padding: 0 20px;
+  overflow-y: auto;
+}
+
+.scrollView::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollView::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollView::-webkit-scrollbar-thumb {
+  background: #BDBDBD;
+  border-radius: 4px;
+}
+
+/* Section Title */
+.sectionTitle {
+  font-size: 20px;
+  font-weight: bold;
+  color: #212121;
+  margin-bottom: 15px;
+  margin-top: 15px;
+}
+
+/* Menu Grid */
+.menuGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  padding-bottom: 20px;
+}
+
+/* Menu Card */
+.menuCard {
+  background-color: #FFF;
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.menuCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.menuCard:active {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+
+/* Icon Container */
+.iconContainer {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/* Menu Title */
+.menuTitle {
+  font-size: 16px;
+  font-weight: bold;
+  color: #212121;
+  margin: 0 0 4px 0;
+  text-align: center;
+}
+
+/* Menu Description */
+.menuDescription {
+  font-size: 12px;
+  color: #757575;
+  text-align: center;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .menuGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .greeting {
+    font-size: 24px;
+  }
+
+  .statsContainer {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .statCard {
+    padding: 15px;
+  }
+
+  .statNumber {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 15px;
+  }
+
+  .statsContainer {
+    padding: 0 10px;
+    gap: 8px;
+    margin-bottom: 15px;
+  }
+
+  .scrollView {
+    padding: 0 15px;
+  }
+
+  .menuCard {
+    padding: 15px;
+    border-radius: 15px;
+  }
+
+  .sectionTitle {
+    font-size: 18px;
+  }
+}

@@ -1,0 +1,415 @@
+/* Header Styles */
+
+.header {
+  height: 70px;
+  background: #13131d;
+  border-bottom: 1px solid #1e1e2e;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.menu-toggle-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: #1e1e2e;
+  color: #e0e0f0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s;
+}
+
+.menu-toggle-btn:hover {
+  background: #252535;
+}
+
+.header-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9090b0;
+  font-size: 0.9rem;
+}
+
+.current-page {
+  color: #e0e0f0;
+  font-weight: 500;
+}
+
+/* ─── Right Side ─── */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.header-item {
+  position: relative;
+}
+
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: #1e1e2e;
+  color: #e0e0f0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.icon-btn:hover {
+  background: #252535;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #f87171;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* ─── User Menu Button ─── */
+.user-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #1e1e2e;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 200px;
+}
+
+.user-menu-btn:hover {
+  background: #252535;
+}
+
+.user-avatar {
+  font-size: 1.8rem;
+  color: #5b5bff;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e0e0f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: #6b6b8a;
+}
+
+.chevron-icon {
+  font-size: 0.8rem;
+  color: #6b6b8a;
+  transition: transform 0.2s;
+}
+
+.user-menu-btn:hover .chevron-icon {
+  transform: translateY(2px);
+}
+
+/* ─── Dropdown Menus ─── */
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #13131d;
+  border: 1px solid #2e2e42;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  min-width: 300px;
+  z-index: 1000;
+  animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Notifications Menu ─── */
+.notifications-menu {
+  width: 360px;
+}
+
+.dropdown-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #1e1e2e;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dropdown-header h4 {
+  font-size: 1rem;
+  color: #e0e0f0;
+  margin: 0;
+}
+
+.mark-read-btn {
+  background: none;
+  border: none;
+  color: #5b5bff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.mark-read-btn:hover {
+  color: #7070ff;
+}
+
+.notifications-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notifications-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notifications-list::-webkit-scrollbar-thumb {
+  background: #2e2e42;
+  border-radius: 3px;
+}
+
+.notification-item {
+  padding: 14px 20px;
+  border-bottom: 1px solid #1e1e2e;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.notification-item:hover {
+  background: #0d0d16;
+}
+
+.notification-item.unread {
+  background: rgba(91, 91, 255, 0.05);
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-content p {
+  font-size: 0.85rem;
+  color: #e0e0f0;
+  margin: 0 0 4px;
+}
+
+.notification-time {
+  font-size: 0.75rem;
+  color: #6b6b8a;
+}
+
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  background: #5b5bff;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dropdown-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #1e1e2e;
+  text-align: center;
+}
+
+.view-all-btn {
+  background: none;
+  border: none;
+  color: #5b5bff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.view-all-btn:hover {
+  color: #7070ff;
+}
+
+/* ─── User Dropdown ─── */
+.user-dropdown {
+  width: 280px;
+}
+
+.user-dropdown-header {
+  padding: 20px;
+  text-align: center;
+}
+
+.user-avatar-large {
+  font-size: 3.5rem;
+  color: #5b5bff;
+  margin-bottom: 12px;
+}
+
+.user-dropdown-info h4 {
+  font-size: 1.1rem;
+  color: #e0e0f0;
+  margin: 0 0 4px;
+}
+
+.user-dropdown-info p {
+  font-size: 0.85rem;
+  color: #6b6b8a;
+  margin: 0 0 12px;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #5b5bff;
+  color: #fff;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #1e1e2e;
+}
+
+.user-menu-items {
+  padding: 8px;
+}
+
+.user-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: #e0e0f0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.user-menu-item:hover {
+  background: #1e1e2e;
+}
+
+.user-menu-item svg {
+  font-size: 1.1rem;
+  color: #6b6b8a;
+}
+
+.logout-item {
+  color: #f87171;
+}
+
+.logout-item svg {
+  color: #f87171;
+}
+
+.logout-item:hover {
+  background: rgba(248, 113, 113, 0.1);
+}
+
+/* ─── Overlay ─── */
+.header-overlay {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 99;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 16px;
+  }
+
+  .header-breadcrumb {
+    display: none;
+  }
+
+  .user-menu-btn {
+    min-width: auto;
+    padding: 8px;
+  }
+
+  .user-info {
+    display: none;
+  }
+
+  .chevron-icon {
+    display: none;
+  }
+
+  .dropdown-menu {
+    right: 0;
+    left: auto;
+  }
+
+  .notifications-menu,
+  .user-dropdown {
+    width: calc(100vw - 32px);
+    max-width: 360px;
+  }
+}
