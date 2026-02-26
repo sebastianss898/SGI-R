@@ -55,6 +55,11 @@ export const PERMISSIONS = {
   DELETE_ALERT: 'delete_alert',
   CREATE_GLOBAL_ALERT: 'create_global_alert',
   
+  // Reportes
+  VIEW_REPORTS_PAGE: 'view_reports_page',
+  GENERATE_REPORTS: 'generate_reports',
+  DOWNLOAD_REPORTS: 'download_reports',
+  
   // Configuración
   VIEW_SETTINGS: 'view_settings',
   EDIT_SETTINGS: 'edit_settings',
@@ -84,6 +89,9 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.EDIT_ALERT,
     PERMISSIONS.DELETE_ALERT,
     PERMISSIONS.CREATE_GLOBAL_ALERT,
+    PERMISSIONS.VIEW_REPORTS_PAGE,
+    PERMISSIONS.GENERATE_REPORTS,
+    PERMISSIONS.DOWNLOAD_REPORTS,
   ],
   
   [ROLES.RECEPTIONIST]: [

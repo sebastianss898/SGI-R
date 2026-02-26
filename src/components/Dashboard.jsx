@@ -13,7 +13,7 @@ import '../styles/globalStyles.css';
 
 const Dashboard = () => {
   const [notes, setNotes] = useState([
-    {
+   /* {
       id: '1',
       title: 'Llegada grupo corporativo',
       description: 'Grupo de 15 personas de empresa TechCorp. Check-in a las 14:00hrs. Solicitan sala de reuniones.',
@@ -90,7 +90,7 @@ const Dashboard = () => {
       user: 'Carlos Pérez',
       status: 'completed',
       country: null
-    },
+    },*/
   ]);
 
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -122,7 +122,7 @@ const Dashboard = () => {
     <div className="dashboard">
       {/* Stats Cards */}
       <div className="stats-grid">
-        <div className="stat-card">
+        {/*<div className="stat-card">
           <div className="stat-icon" style={{ backgroundColor: '#E3F2FD' }}>
             <FaFileAlt style={{ color: '#1A237E' }} />
           </div>
@@ -160,7 +160,7 @@ const Dashboard = () => {
             <h3>{notes.filter(n => n.status === 'pending').length}</h3>
             <p>Pendientes</p>
           </div>
-        </div>
+        </div>*/}
       </div>
 
       {/* Filters */}

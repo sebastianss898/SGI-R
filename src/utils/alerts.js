@@ -169,13 +169,19 @@ export const canUserManageAlert = (alert, userRole, userId) => {
   return false;
 };
 
+// Helper para interpretar fechas en formato YYYY-MM-DD como fechas locales
+const parseDateLocal = (dateStr) => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 // Calcular próxima ocurrencia según recurrencia
 export const calculateNextOccurrence = (alert) => {
   if (!alert.recurrence || alert.recurrence === RECURRENCE_TYPE.NONE) {
     return null;
   }
 
-  const currentDate = new Date(alert.date);
+  const currentDate = parseDateLocal(alert.date);
   const now = new Date();
   let nextDate = new Date(currentDate);
 
@@ -230,7 +236,7 @@ export const calculateNextOccurrence = (alert) => {
 // Verificar si una alerta está activa ahora
 export const isAlertActiveNow = (alert) => {
   const now = new Date();
-  const alertDate = new Date(alert.date);
+  const alertDate = parseDateLocal(alert.date);
   const alertTime = alert.time;
   
   // Combinar fecha y hora
@@ -261,7 +267,7 @@ export const getTodayAlerts = (alerts, userRole) => {
     // Verificar si está activa
     if (!isAlertActiveNow(alert)) return false;
     
-    const alertDate = new Date(alert.date);
+    const alertDate = parseDateLocal(alert.date);
     alertDate.setHours(0, 0, 0, 0);
     
     // Si no tiene recurrencia, verificar si es hoy
@@ -290,7 +296,7 @@ export const getUpcomingAlerts = (alerts, userRole, days = 7) => {
     if (!canUserSeeAlert(alert, userRole)) return false;
     if (!isAlertActiveNow(alert)) return false;
     
-    const alertDate = new Date(alert.date);
+    const alertDate = parseDateLocal(alert.date);
     alertDate.setHours(0, 0, 0, 0);
     
     if (alert.recurrence === RECURRENCE_TYPE.NONE) {
@@ -307,7 +313,7 @@ export const getUpcomingAlerts = (alerts, userRole, days = 7) => {
 
 // Formatear fecha y hora para mostrar
 export const formatAlertDateTime = (alert) => {
-  const date = new Date(alert.date);
+  const date = parseDateLocal(alert.date);
   const dateStr = date.toLocaleDateString('es-CL', {
     day: '2-digit',
     month: 'short',

@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase';
 import { 
   collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
-  query, orderBy
+  query, orderBy, where 
 } from 'firebase/firestore';
 import {
   FaBell, FaPlus, FaEdit, FaTrash, FaClock, FaCalendar,
-  FaFilter, FaSearch, FaCheckCircle,
-  FaRedo, FaTimes, FaEye, FaEyeSlash
+  FaFilter, FaSearch, FaCheckCircle, FaExclamationTriangle,
+  FaSync, FaTimes, FaEye, FaEyeSlash
 } from 'react-icons/fa';
 import {
   ALERT_TYPES, ALERT_PRIORITY, RECURRENCE_TYPE, ALERT_TARGET,
@@ -18,6 +18,85 @@ import {
 } from '../utils/alerts';
 import '../styles/alertsManagement.css';
 
+// Grid component is memoized to avoid re-renders when unrelated state (e.g. form inputs)
+// changes in the parent. Handlers passed to it are kept stable via useCallback.
+const AlertsGrid = React.memo(({ alerts, currentUser, handleToggleActive, openEditModal, handleDeleteAlert }) => (
+  <div className="alerts-grid">
+    {alerts.map(alert => (
+      <div key={alert.id} className={`alert-card ${!alert.active ? 'inactive' : ''}`}>
+        <div className="alert-card-header">
+          <div className="alert-type-badge" style={{ background: ALERT_TYPE_COLORS[alert.type] }}>
+            <span className="alert-icon">{ALERT_TYPE_ICONS[alert.type]}</span>
+            <span>{ALERT_TYPE_LABELS[alert.type]}</span>
+          </div>
+          <div className="alert-actions-quick">
+            <button
+              className="action-btn-icon"
+              onClick={() => handleToggleActive(alert)}
+              title={alert.active ? 'Desactivar' : 'Activar'}
+            >
+              {alert.active ? <FaEye /> : <FaEyeSlash />}
+            </button>
+            {canUserManageAlert(alert, currentUser.role, currentUser.id) && (
+              <>
+                <button
+                  className="action-btn-icon edit"
+                  onClick={() => openEditModal(alert)}
+                  title="Editar"
+                >
+                  <FaEdit />
+                </button>
+                <button
+                  className="action-btn-icon delete"
+                  onClick={() => handleDeleteAlert(alert.id)}
+                  title="Eliminar"
+                >
+                  <FaTrash />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <h3 className="alert-title">{alert.title}</h3>
+        <p className="alert-description">{alert.description}</p>
+
+        <div className="alert-metadata">
+          <div className="alert-meta-item">
+            <FaClock />
+            <span>{formatAlertDateTime(alert)}</span>
+          </div>
+          {alert.recurrence !== RECURRENCE_TYPE.NONE && (
+            <div className="alert-meta-item">
+              <FaSync />
+              <span>{RECURRENCE_LABELS[alert.recurrence]}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="alert-footer">
+          <span 
+            className="priority-indicator" 
+            style={{ background: ALERT_PRIORITY_COLORS[alert.priority] }}
+          >
+            {ALERT_PRIORITY_LABELS[alert.priority]}
+          </span>
+          <span className="target-indicator">
+            {ALERT_TARGET_LABELS[alert.target]}
+          </span>
+        </div>
+
+        <div className="alert-creator">
+          <small>Por {alert.createdByName}</small>
+        </div>
+      </div>
+    ))}
+  </div>
+));
+
+
+
+
 const AlertsManagement = ({ currentUser }) => {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +106,7 @@ const AlertsManagement = ({ currentUser }) => {
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('active');
   const [showOnlyMine, setShowOnlyMine] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   
   const [alertForm, setAlertForm] = useState({
     title: '',
@@ -41,6 +121,14 @@ const AlertsManagement = ({ currentUser }) => {
     customRoles: [],
     active: true,
   });
+
+  // Usar un handler más eficiente que no causa re-renders innecesarios
+  const handleInputChange = (field, value) => {
+    setAlertForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   const weekDays = [
     { value: 0, label: 'Dom' },
@@ -76,6 +164,7 @@ const AlertsManagement = ({ currentUser }) => {
 
   const handleCreateAlert = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const newAlert = {
         ...alertForm,
@@ -85,20 +174,25 @@ const AlertsManagement = ({ currentUser }) => {
         updatedAt: new Date(),
       };
       
-      await addDoc(collection(db, 'alerts'), newAlert);
-      
+      const docRef = await addDoc(collection(db, 'alerts'), newAlert);
+
+      // optimistically update local state instead of re-fetching
+      setAlerts(prev => [{ id: docRef.id, ...newAlert }, ...prev]);
+
       setShowModal(false);
       resetForm();
-      loadAlerts();
       alert('Alerta creada exitosamente');
     } catch (error) {
       console.error('Error creating alert:', error);
       alert('Error al crear alerta');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleUpdateAlert = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const alertRef = doc(db, 'alerts', editingAlert.id);
       await updateDoc(alertRef, {
@@ -106,45 +200,55 @@ const AlertsManagement = ({ currentUser }) => {
         updatedAt: new Date(),
       });
       
+      // update local state
+      setAlerts(prev => prev.map(a =>
+        a.id === editingAlert.id ? { ...a, ...alertForm, updatedAt: new Date() } : a
+      ));
+
       setShowModal(false);
       setEditingAlert(null);
       resetForm();
-      loadAlerts();
       alert('Alerta actualizada exitosamente');
     } catch (error) {
       console.error('Error updating alert:', error);
       alert('Error al actualizar alerta');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDeleteAlert = async (alertId) => {
+  const handleDeleteAlert = useCallback(async (alertId) => {
     if (window.confirm('¿Estás seguro de eliminar esta alerta?')) {
       try {
         await deleteDoc(doc(db, 'alerts', alertId));
-        loadAlerts();
+        // remove from local state
+        setAlerts(prev => prev.filter(a => a.id !== alertId));
         alert('Alerta eliminada exitosamente');
       } catch (error) {
         console.error('Error deleting alert:', error);
         alert('Error al eliminar alerta');
       }
     }
-  };
+  }, []);
 
-  const handleToggleActive = async (alert) => {
+  const handleToggleActive = useCallback(async (alert) => {
     try {
       const alertRef = doc(db, 'alerts', alert.id);
       await updateDoc(alertRef, {
         active: !alert.active,
         updatedAt: new Date(),
       });
-      loadAlerts();
+      // update local state
+      setAlerts(prev => prev.map(a =>
+        a.id === alert.id ? { ...a, active: !a.active, updatedAt: new Date() } : a
+      ));
     } catch (error) {
       console.error('Error toggling alert:', error);
       alert('Error al cambiar estado de alerta');
     }
-  };
+  }, []);
 
-  const openEditModal = (alert) => {
+  const openEditModal = useCallback((alert) => {
     setEditingAlert(alert);
     setAlertForm({
       title: alert.title,
@@ -160,7 +264,7 @@ const AlertsManagement = ({ currentUser }) => {
       active: alert.active,
     });
     setShowModal(true);
-  };
+  }, []);
 
   const resetForm = () => {
     setAlertForm({
@@ -188,25 +292,34 @@ const AlertsManagement = ({ currentUser }) => {
     }));
   };
 
-  const filteredAlerts = alerts.filter(alert => {
-    const matchesSearch = 
-      alert.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      alert.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = filterType === 'all' || alert.type === filterType;
-    
-    const matchesStatus = 
-      filterStatus === 'all' ||
-      (filterStatus === 'active' && alert.active !== false) ||
-      (filterStatus === 'inactive' && alert.active === false);
-    
-    const matchesMine = !showOnlyMine || alert.createdBy === currentUser.id;
-    
-    return matchesSearch && matchesType && matchesStatus && matchesMine;
-  });
+  const filteredAlerts = React.useMemo(() => {
+    return alerts.filter(alert => {
+      const matchesSearch = 
+        alert.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        alert.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesType = filterType === 'all' || alert.type === filterType;
+      
+      const matchesStatus = 
+        filterStatus === 'all' ||
+        (filterStatus === 'active' && alert.active !== false) ||
+        (filterStatus === 'inactive' && alert.active === false);
+      
+      const matchesMine = !showOnlyMine || alert.createdBy === currentUser.id;
+      
+      return matchesSearch && matchesType && matchesStatus && matchesMine;
+    });
+  }, [alerts, searchTerm, filterType, filterStatus, showOnlyMine, currentUser.id]);
 
-  const todayAlerts = getTodayAlerts(alerts, currentUser.role);
-  const upcomingAlerts = getUpcomingAlerts(alerts, currentUser.role, 7);
+  const todayAlerts = React.useMemo(() => 
+    getTodayAlerts(alerts, currentUser.role), 
+    [alerts, currentUser.role]
+  );
+
+  const upcomingAlerts = React.useMemo(() => 
+    getUpcomingAlerts(alerts, currentUser.role, 7), 
+    [alerts, currentUser.role]
+  );
 
   return (
     <div className="alerts-management">
@@ -304,77 +417,13 @@ const AlertsManagement = ({ currentUser }) => {
           <p>Crea tu primera alerta para empezar</p>
         </div>
       ) : (
-        <div className="alerts-grid">
-          {filteredAlerts.map(alert => (
-            <div key={alert.id} className={`alert-card ${!alert.active ? 'inactive' : ''}`}>
-              <div className="alert-card-header">
-                <div className="alert-type-badge" style={{ background: ALERT_TYPE_COLORS[alert.type] }}>
-                  <span className="alert-icon">{ALERT_TYPE_ICONS[alert.type]}</span>
-                  <span>{ALERT_TYPE_LABELS[alert.type]}</span>
-                </div>
-                <div className="alert-actions-quick">
-                  <button
-                    className="action-btn-icon"
-                    onClick={() => handleToggleActive(alert)}
-                    title={alert.active ? 'Desactivar' : 'Activar'}
-                  >
-                    {alert.active ? <FaEye /> : <FaEyeSlash />}
-                  </button>
-                  {canUserManageAlert(alert, currentUser.role, currentUser.id) && (
-                    <>
-                      <button
-                        className="action-btn-icon edit"
-                        onClick={() => openEditModal(alert)}
-                        title="Editar"
-                      >
-                        <FaEdit />
-                      </button>
-                      <button
-                        className="action-btn-icon delete"
-                        onClick={() => handleDeleteAlert(alert.id)}
-                        title="Eliminar"
-                      >
-                        <FaTrash />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <h3 className="alert-title">{alert.title}</h3>
-              <p className="alert-description">{alert.description}</p>
-
-              <div className="alert-metadata">
-                <div className="alert-meta-item">
-                  <FaClock />
-                  <span>{formatAlertDateTime(alert)}</span>
-                </div>
-                {alert.recurrence !== RECURRENCE_TYPE.NONE && (
-                  <div className="alert-meta-item">
-                    <FaRedo />
-                    <span>{RECURRENCE_LABELS[alert.recurrence]}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="alert-footer">
-                <span 
-                  className="priority-indicator" 
-                  style={{ background: ALERT_PRIORITY_COLORS[alert.priority] }}
-                >
-                  {ALERT_PRIORITY_LABELS[alert.priority]}
-                </span>
-                <span className="target-indicator">
-                  {ALERT_TARGET_LABELS[alert.target]}
-                </span>
-              </div>
-
-              <div className="alert-creator">
-                <small>Por {alert.createdByName}</small>
-              </div>
-            </div>
-          ))}
-        </div>
+        <AlertsGrid
+          alerts={filteredAlerts}
+          currentUser={currentUser}
+          handleToggleActive={handleToggleActive}
+          openEditModal={openEditModal}
+          handleDeleteAlert={handleDeleteAlert}
+        />
       )}
 
       {/* Modal */}
@@ -396,7 +445,7 @@ const AlertsManagement = ({ currentUser }) => {
                     type="text"
                     placeholder="Ej: Jacuzzi para las 7 PM"
                     value={alertForm.title}
-                    onChange={(e) => setAlertForm({ ...alertForm, title: e.target.value })}
+                    onChange={(e) => handleInputChange('title', e.target.value)}
                     required
                   />
                 </div>
@@ -406,7 +455,7 @@ const AlertsManagement = ({ currentUser }) => {
                   <textarea
                     placeholder="Detalles adicionales..."
                     value={alertForm.description}
-                    onChange={(e) => setAlertForm({ ...alertForm, description: e.target.value })}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
                     rows={3}
                   />
                 </div>
@@ -415,7 +464,7 @@ const AlertsManagement = ({ currentUser }) => {
                   <label>Tipo *</label>
                   <select
                     value={alertForm.type}
-                    onChange={(e) => setAlertForm({ ...alertForm, type: e.target.value })}
+                    onChange={(e) => handleInputChange('type', e.target.value)}
                     required
                   >
                     {Object.entries(ALERT_TYPE_LABELS).map(([key, label]) => (
@@ -428,7 +477,7 @@ const AlertsManagement = ({ currentUser }) => {
                   <label>Prioridad *</label>
                   <select
                     value={alertForm.priority}
-                    onChange={(e) => setAlertForm({ ...alertForm, priority: e.target.value })}
+                    onChange={(e) => handleInputChange('priority', e.target.value)}
                     required
                   >
                     {Object.entries(ALERT_PRIORITY_LABELS).map(([key, label]) => (
@@ -442,7 +491,7 @@ const AlertsManagement = ({ currentUser }) => {
                   <input
                     type="date"
                     value={alertForm.date}
-                    onChange={(e) => setAlertForm({ ...alertForm, date: e.target.value })}
+                    onChange={(e) => handleInputChange('date', e.target.value)}
                     required
                   />
                 </div>
@@ -452,7 +501,7 @@ const AlertsManagement = ({ currentUser }) => {
                   <input
                     type="time"
                     value={alertForm.time}
-                    onChange={(e) => setAlertForm({ ...alertForm, time: e.target.value })}
+                    onChange={(e) => handleInputChange('time', e.target.value)}
                     required
                   />
                 </div>
@@ -461,7 +510,7 @@ const AlertsManagement = ({ currentUser }) => {
                   <label>Recurrencia</label>
                   <select
                     value={alertForm.recurrence}
-                    onChange={(e) => setAlertForm({ ...alertForm, recurrence: e.target.value })}
+                    onChange={(e) => handleInputChange('recurrence', e.target.value)}
                   >
                     {Object.entries(RECURRENCE_LABELS).map(([key, label]) => (
                       <option key={key} value={key}>{label}</option>
@@ -491,7 +540,7 @@ const AlertsManagement = ({ currentUser }) => {
                   <label>Destinatarios *</label>
                   <select
                     value={alertForm.target}
-                    onChange={(e) => setAlertForm({ ...alertForm, target: e.target.value })}
+                    onChange={(e) => handleInputChange('target', e.target.value)}
                     required
                   >
                     {Object.entries(ALERT_TARGET_LABELS)
@@ -504,11 +553,14 @@ const AlertsManagement = ({ currentUser }) => {
               </div>
 
               <div className="modal-alerts-actions">
-                <button type="button" className="btn-cancel-alerts" onClick={() => { setShowModal(false); resetForm(); }}>
+                <button type="button" className="btn-cancel-alerts" onClick={() => { setShowModal(false); resetForm(); }} disabled={submitting}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-save-alerts">
-                  {editingAlert ? 'Actualizar' : 'Crear'} Alerta
+                <button type="submit" className="btn-save-alerts" disabled={submitting}>
+                  {submitting
+                    ? (editingAlert ? 'Actualizando...' : 'Creando...')
+                    : (editingAlert ? 'Actualizar' : 'Crear')
+                  } Alerta
                 </button>
               </div>
             </form>

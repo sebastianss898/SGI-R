@@ -2,31 +2,26 @@
 
 .notifications-widget {
   position: relative;
-  display: flex;
-  align-items: center;
 }
 
 .notifications-btn {
   width: 44px;
   height: 44px;
   border: none;
-  background: #252d4a;
-  color: #818cf8;
+  background: #1e1e2e;
+  color: #e0e0f0;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   transition: all 0.2s;
   position: relative;
-  border: 1px solid rgba(129, 140, 248, 0.2);
 }
 
 .notifications-btn:hover {
-  background: #2f3a52;
-  border-color: rgba(129, 140, 248, 0.5);
-  color: #a78bfa;
+  background: #252535;
 }
 
 .notifications-badge {
@@ -55,6 +50,12 @@
   }
 }
 
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
 .notifications-overlay {
   position: fixed;
   inset: 0;
@@ -66,17 +67,16 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  background: var(--bg-secondary, #1a1f3a);
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  background: #13131d;
+  border: 1px solid #2e2e42;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   width: 420px;
   max-height: 600px;
   z-index: 999;
   animation: dropdownFadeIn 0.2s ease;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 @keyframes dropdownFadeIn {
@@ -163,6 +163,11 @@
   background: rgba(248, 113, 113, 0.1);
 }
 
+.group-header.recent {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+}
+
 .group-header svg {
   font-size: 0.9rem;
 }
@@ -190,6 +195,12 @@
 .notification-item.now {
   background: rgba(248, 113, 113, 0.1);
   border-left-color: #f87171;
+}
+
+.notification-item.recent {
+  background: rgba(251, 191, 36, 0.08);
+  border-left-color: #fbbf24;
+  opacity: 0.85;
 }
 
 .notification-icon {

@@ -476,12 +476,16 @@
   outline: none;
   transition: border-color 0.2s;
   font-family: 'DM Sans', sans-serif;
+  will-change: contents;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {
   border-color: #5b5bff;
+  transition: none; /* Remover transición en focus para respuesta instantánea */
 }
 
 .form-field select option,

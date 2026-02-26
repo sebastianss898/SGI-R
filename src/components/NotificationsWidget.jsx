@@ -1,8 +1,8 @@
 // src/components/NotificationsWidget.jsx - Widget de notificaciones en tiempo real
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, query, getDocs, updateDoc, doc, orderBy } from 'firebase/firestore';
-import { FaBell, FaCheck, FaClock, FaExclamationTriangle, FaCalendar } from 'react-icons/fa';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { FaBell, FaCheck, FaClock, FaExclamationTriangle,FaCalendar } from 'react-icons/fa';
 import { 
   getTodayAlerts, canUserSeeAlert, formatAlertDateTime,
   ALERT_TYPE_ICONS, ALERT_TYPE_COLORS, ALERT_PRIORITY_COLORS 
@@ -14,100 +14,117 @@ const NotificationsWidget = ({ currentUser }) => {
   const [todayAlerts, setTodayAlerts] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [previousActiveCount, setPreviousActiveCount] = useState(0);
 
   useEffect(() => {
-    if (currentUser?.id) {
-      loadAlerts();
+    loadAlerts();
+    
+    // Recargar cada 10 segundos para ser más reactivo
+    const interval = setInterval(loadAlerts, 10000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
+
+  // Verificar alertas activas y notificar cambios
+  useEffect(() => {
+    if (todayAlerts.length > 0) {
+      const sortedAlerts = getAlertsByTime();
+      const activeNow = sortedAlerts.filter(a => a.status === 'now');
       
-      // Recargar cada 30 segundos
-      const interval = setInterval(loadAlerts, 30000);
-      return () => clearInterval(interval);
+      // Si hay nuevas alertas activas
+      if (activeNow.length > previousActiveCount) {
+        // Reproducir sonido de notificación
+        playNotificationSound();
+        
+        // Mostrar notificación del navegador
+        showBrowserNotification(activeNow[activeNow.length - 1]);
+        
+        // Hacer que el badge parpadee
+        const badge = document.querySelector('.notifications-badge');
+        if (badge) {
+          badge.style.animation = 'none';
+          setTimeout(() => {
+            badge.style.animation = 'pulse 2s infinite, shake 0.5s ease';
+          }, 10);
+        }
+      }
+      
+      setPreviousActiveCount(activeNow.length);
     }
-  }, [currentUser?.id]);
+  }, [todayAlerts]);
+
+  const playNotificationSound = () => {
+    try {
+      // Crear un beep simple
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.log('No se pudo reproducir sonido:', error);
+    }
+  };
+
+  const showBrowserNotification = (alert) => {
+    if (!('Notification' in window)) return;
+    
+    if (Notification.permission === 'granted') {
+      new Notification('⏰ Alerta Activa - Hotel Cytrico', {
+        body: alert.title + '\n' + (alert.description || ''),
+        icon: '/favicon.ico',
+        tag: alert.id,
+        requireInteraction: true
+      });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          showBrowserNotification(alert);
+        }
+      });
+    }
+  };
 
   useEffect(() => {
     if (alerts.length > 0) {
-      // Mostrar TODAS las alertas activas como "de hoy" si no tienen fecha especificada
-      const todayAlerts = alerts.filter(alert => {
-        // Si no tiene fecha, mostrarla como alerta de hoy
-        if (!alert.date) {
-          console.log('⚠️ Alerta sin fecha:', alert);
-          return true;
-        }
-        
-        // Si tiene fecha, verificar si es hoy
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        try {
-          // Intentar parsear la fecha
-          let alertDate;
-          if (typeof alert.date === 'string') {
-            alertDate = new Date(alert.date);
-          } else if (alert.date instanceof Date) {
-            alertDate = alert.date;
-          } else if (alert.date?.toDate) {
-            alertDate = alert.date.toDate();
-          } else {
-            console.log('⚠️ Formato de fecha desconocido:', alert.date, typeof alert.date);
-            return true; // Mostrar si no podemos parsear
-          }
-          
-          alertDate.setHours(0, 0, 0, 0);
-          return alertDate >= today && alertDate < tomorrow;
-        } catch (err) {
-          console.error('❌ Error parsing date:', err, alert.date);
-          return true; // Mostrar si hay error
-        }
-      });
-      
-      console.log('📅 Alertas de hoy:', todayAlerts);
-      setTodayAlerts(todayAlerts);
+      const today = getTodayAlerts(alerts, currentUser.role);
+      setTodayAlerts(today);
       
       // Contar no leídas
-      const unread = todayAlerts.filter(a => !a.readBy?.includes(currentUser?.id)).length;
+      const unread = today.filter(a => !a.readBy?.includes(currentUser.id)).length;
       setUnreadCount(unread);
-      console.log('🔔 Alertas no leídas:', unread);
-    } else {
-      setTodayAlerts([]);
-      setUnreadCount(0);
     }
-  }, [alerts, currentUser?.id]);
+  }, [alerts, currentUser]);
 
   const loadAlerts = async () => {
     try {
-      setIsLoading(true);
-      // Primero intentar obtener todas las alertas sin filtro
-      const q = query(
-        collection(db, 'alerts'),
-        orderBy('createdAt', 'desc')
-      );
+      const q = query(collection(db, 'alerts'));
       const snapshot = await getDocs(q);
       const alertsData = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() || new Date()
+        ...doc.data()
       }));
       
-      console.log('📢 Todas las alertas:', alertsData);
-      console.log('👤 Usuario actual:', currentUser);
+      // Filtrar solo las activas y que el usuario puede ver
+      const userAlerts = alertsData.filter(alert => 
+        alert.active !== false && canUserSeeAlert(alert, currentUser.role)
+      );
       
-      // Filtrar solo activas
-      const activeAlerts = alertsData.filter(a => a.active !== false);
-      console.log('✅ Alertas activas:', activeAlerts);
-      
-      // Para el widget de notificaciones, mostrar todas las alertas activas
-      // (el filtrado por rol se hace después)
-      setAlerts(activeAlerts);
+      setAlerts(userAlerts);
     } catch (error) {
-      console.error('❌ Error loading alerts:', error);
+      console.error('Error loading alerts:', error);
+      // Si hay error, establecer array vacío para evitar crashes
       setAlerts([]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -147,84 +164,71 @@ const NotificationsWidget = ({ currentUser }) => {
   };
 
   const getAlertsByTime = () => {
-    if (!todayAlerts || todayAlerts.length === 0) return [];
-    
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
     
     return todayAlerts.map(alert => {
-      try {
-        if (!alert.time) {
-          return {
-            ...alert,
-            status: 'later',
-            statusLabel: 'Sin hora',
-            timeDiff: 9999
-          };
-        }
-        
-        const [hours, minutes] = alert.time.split(':').map(Number);
-        if (isNaN(hours) || isNaN(minutes)) {
-          return {
-            ...alert,
-            status: 'later',
-            statusLabel: alert.time,
-            timeDiff: 9999
-          };
-        }
-        
-        const alertMinutes = hours * 60 + minutes;
-        const currentMinutesTotal = currentHour * 60 + currentMinutes;
-        const diff = alertMinutes - currentMinutesTotal;
-        
-        let status = 'upcoming';
-        let statusLabel = '';
-        
-        if (diff < -30) {
-          status = 'passed';
-          statusLabel = 'Pasado';
-        } else if (diff >= -30 && diff <= 30) {
-          status = 'now';
-          statusLabel = 'AHORA';
-        } else if (diff > 30 && diff <= 120) {
-          status = 'soon';
-          const hrs = Math.floor(diff / 60);
-          const mins = diff % 60;
-          statusLabel = `En ${hrs}h ${mins}min`;
-        } else {
-          status = 'later';
-          statusLabel = `A las ${alert.time}`;
-        }
-        
-        return {
-          ...alert,
-          status,
-          statusLabel,
-          timeDiff: diff
-        };
-      } catch (err) {
-        console.error('Error parsing alert time:', alert, err);
-        return {
-          ...alert,
-          status: 'later',
-          statusLabel: 'Hora inválida',
-          timeDiff: 9999
-        };
+      const [hours, minutes] = alert.time.split(':').map(Number);
+      const alertMinutes = hours * 60 + minutes;
+      const currentMinutesTotal = currentHour * 60 + currentMinutes;
+      const diff = alertMinutes - currentMinutesTotal;
+      
+      let status = 'upcoming';
+      let statusLabel = '';
+      
+      // Ajustado para ser más preciso
+      if (diff < -60) {
+        // Más de 1 hora pasada - no mostrar
+        return null;
+      } else if (diff >= -15 && diff <= 15) {
+        // Ventana de ±15 minutos = AHORA
+        status = 'now';
+        statusLabel = '🔴 AHORA';
+      } else if (diff > 15 && diff <= 60) {
+        // Entre 15 y 60 minutos = Muy pronto
+        status = 'soon';
+        const minLeft = Math.ceil(diff);
+        statusLabel = `En ${minLeft} min`;
+      } else if (diff > 60 && diff <= 180) {
+        // Entre 1 y 3 horas = Próximas
+        status = 'soon';
+        const hours = Math.floor(diff / 60);
+        const mins = diff % 60;
+        statusLabel = mins > 0 ? `En ${hours}h ${mins}min` : `En ${hours}h`;
+      } else if (diff > 180) {
+        // Más de 3 horas = Más tarde
+        status = 'later';
+        statusLabel = `A las ${alert.time}`;
+      } else {
+        // Entre -60 y -15 = Pasó hace poco
+        status = 'recent';
+        const minAgo = Math.abs(diff);
+        statusLabel = `Hace ${minAgo} min`;
       }
-    }).sort((a, b) => a.timeDiff - b.timeDiff);
+      
+      return {
+        ...alert,
+        status,
+        statusLabel,
+        timeDiff: diff
+      };
+    })
+    .filter(a => a !== null) // Remover alertas muy pasadas
+    .sort((a, b) => a.timeDiff - b.timeDiff);
   };
 
   const sortedAlerts = getAlertsByTime();
   const activeNow = sortedAlerts.filter(a => a.status === 'now');
+  const recentPassed = sortedAlerts.filter(a => a.status === 'recent');
   const upcoming = sortedAlerts.filter(a => a.status === 'soon');
+  const later = sortedAlerts.filter(a => a.status === 'later');
 
   return (
     <div className="notifications-widget">
       <button 
         className="notifications-btn"
         onClick={() => setShowDropdown(!showDropdown)}
-        title={`${unreadCount} alertas no leídas`}
       >
         <FaBell />
         {unreadCount > 0 && (
@@ -236,97 +240,111 @@ const NotificationsWidget = ({ currentUser }) => {
         <>
           <div className="notifications-overlay" onClick={() => setShowDropdown(false)} />
           <div className="notifications-dropdown">
-            {isLoading ? (
-              <div className="notifications-loading">
-                <p>Cargando alertas...</p>
+            <div className="notifications-header">
+              <h4>Notificaciones de Hoy</h4>
+              {unreadCount > 0 && (
+                <button 
+                  className="mark-all-read-btn"
+                  onClick={markAllAsRead}
+                >
+                  <FaCheck /> Marcar todas
+                </button>
+              )}
+            </div>
+
+            <div className="notifications-list">
+              {/* Alertas AHORA */}
+              {activeNow.length > 0 && (
+                <div className="notification-group">
+                  <div className="group-header urgent">
+                    <FaExclamationTriangle />
+                    <span>AHORA</span>
+                  </div>
+                  {activeNow.map(alert => (
+                    <NotificationItem 
+                      key={alert.id}
+                      alert={alert}
+                      currentUser={currentUser}
+                      onMarkAsRead={markAsRead}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Alertas recién pasadas */}
+              {recentPassed.length > 0 && (
+                <div className="notification-group">
+                  <div className="group-header recent">
+                    <FaClock />
+                    <span>RECIÉN PASADAS</span>
+                  </div>
+                  {recentPassed.map(alert => (
+                    <NotificationItem 
+                      key={alert.id}
+                      alert={alert}
+                      currentUser={currentUser}
+                      onMarkAsRead={markAsRead}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Próximas (siguiente 3 horas) */}
+              {upcoming.length > 0 && (
+                <div className="notification-group">
+                  <div className="group-header">
+                    <FaClock />
+                    <span>PRÓXIMAS</span>
+                  </div>
+                  {upcoming.map(alert => (
+                    <NotificationItem 
+                      key={alert.id}
+                      alert={alert}
+                      currentUser={currentUser}
+                      onMarkAsRead={markAsRead}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Resto del día */}
+              {later.length > 0 && (
+                <div className="notification-group">
+                  <div className="group-header">
+                    <FaCalendar />
+                    <span>MÁS TARDE</span>
+                  </div>
+                  {later.map(alert => (
+                    <NotificationItem 
+                      key={alert.id}
+                      alert={alert}
+                      currentUser={currentUser}
+                      onMarkAsRead={markAsRead}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {todayAlerts.length === 0 && (
+                <div className="no-notifications">
+                  <FaBell style={{ fontSize: '2rem', opacity: 0.3 }} />
+                  <p>No hay alertas para hoy</p>
+                </div>
+              )}
+            </div>
+
+            {todayAlerts.length > 0 && (
+              <div className="notifications-footer">
+                <button 
+                  className="view-all-alerts-btn"
+                  onClick={() => {
+                    setShowDropdown(false);
+                    // Aquí podrías navegar a /alertas
+                  }}
+                >
+                  Ver todas las alertas
+                </button>
               </div>
-            ) : todayAlerts.length === 0 ? (
-              <div className="no-notifications">
-                <FaBell style={{ fontSize: '2rem', opacity: 0.3 }} />
-                <p>No hay alertas para hoy</p>
-              </div>
-            ) : (
-              <>
-                <div className="notifications-header">
-                  <h4>Notificaciones de Hoy ({todayAlerts.length})</h4>
-                  {unreadCount > 0 && (
-                    <button 
-                      className="mark-all-read-btn"
-                      onClick={markAllAsRead}
-                    >
-                      <FaCheck /> Marcar todas
-                    </button>
-                  )}
-                </div>
-
-                <div className="notifications-list">
-                  {/* Alertas AHORA */}
-                  {activeNow.length > 0 && (
-                    <div className="notification-group">
-                      <div className="group-header urgent">
-                        <FaExclamationTriangle />
-                        <span>AHORA</span>
-                      </div>
-                      {activeNow.map(alert => (
-                        <NotificationItem 
-                          key={alert.id}
-                          alert={alert}
-                          currentUser={currentUser}
-                          onMarkAsRead={markAsRead}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Próximas (siguiente 2 horas) */}
-                  {upcoming.length > 0 && (
-                    <div className="notification-group">
-                      <div className="group-header">
-                        <FaClock />
-                        <span>Próximas</span>
-                      </div>
-                      {upcoming.map(alert => (
-                        <NotificationItem 
-                          key={alert.id}
-                          alert={alert}
-                          currentUser={currentUser}
-                          onMarkAsRead={markAsRead}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Resto del día */}
-                  {sortedAlerts.filter(a => a.status === 'later').length > 0 && (
-                    <div className="notification-group">
-                      <div className="group-header">
-                        <FaCalendar />
-                        <span>Más tarde</span>
-                      </div>
-                      {sortedAlerts.filter(a => a.status === 'later').map(alert => (
-                        <NotificationItem 
-                          key={alert.id}
-                          alert={alert}
-                          currentUser={currentUser}
-                          onMarkAsRead={markAsRead}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="notifications-footer">
-                  <button 
-                    className="view-all-alerts-btn"
-                    onClick={() => {
-                      setShowDropdown(false);
-                      // Aquí podrías navegar a /alertas
-                    }}
-                  >
-                    Ver todas las alertas
-                  </button>
-                </div>
-              </>
             )}
           </div>
         </>

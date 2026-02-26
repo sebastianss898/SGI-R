@@ -12,6 +12,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { PERMISSIONS } from './utils/roles';
 import './styles/globalStyles.css';
 import AlertsManagement from './components/AlertsManagement';
+import AlertsSeeder from './components/AlertsSeeder';
+import ReportsManagement from './components/Reportsmanagement';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -100,13 +102,22 @@ function App() {
             <UserManagement />
           </ProtectedRoute>
         );
-        case 'alertas':
+      case 'alertas':
+        return (
+          <ProtectedRoute 
+            requiredPermission={PERMISSIONS.VIEW_ALERTS}
+            userRole={currentUser.role}
+          >
+      <AlertsManagement currentUser={currentUser} />
+    </ProtectedRoute>
+  );
+  case 'reportes':
   return (
     <ProtectedRoute 
-      requiredPermission={PERMISSIONS.VIEW_ALERTS}
+      requiredPermission={PERMISSIONS.VIEW_REPORTS_PAGE}
       userRole={currentUser.role}
     >
-      <AlertsManagement currentUser={currentUser} />
+      <ReportsManagement currentUser={currentUser} />
     </ProtectedRoute>
   );
       default:
@@ -164,6 +175,10 @@ function App() {
         />
         {renderView()}
       </div>
+      {/*<AlertsSeeder 
+  currentUser={currentUser} 
+  onComplete={() => window.location.reload()}
+/> */}
     </div>
   );
 }
