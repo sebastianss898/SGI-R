@@ -84,12 +84,12 @@ export const generateChlorineReport = (data, dateRange) => {
   
   addHeader(
     doc,
-    'Control de Cloro',
+    'Control de Cloro y pH',
     `Período: ${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`
   );
   
-  // Datos de muestra si no hay datos reales
-  const sampleData = data.length > 0 ? data : [
+  // Usar datos reales o de muestra
+  const reportData = data.length > 0 ? data : [
     {
       date: dateRange.start,
       time: '10:00',
@@ -99,57 +99,55 @@ export const generateChlorineReport = (data, dateRange) => {
       temperature: 28,
       responsible: 'Juan Pérez',
       observations: 'Valores normales'
-    },
-    {
-      date: dateRange.start,
-      time: '18:00',
-      location: 'Jacuzzi',
-      chlorineLevel: 2.8,
-      phLevel: 7.3,
-      temperature: 30,
-      responsible: 'María González',
-      observations: 'OK'
     }
   ];
   
   doc.autoTable({
     startY: 45,
-    head: [['Fecha', 'Hora', 'Ubicación', 'Cloro (ppm)', 'pH', 'Temp °C', 'Responsable']],
-    body: sampleData.map(row => [
+    head: [['Fecha', 'Hora', 'Lugar', 'Cloro\n(ppm)', 'Cumple\nCloro', 'pH', 'Cumple\npH', 'Responsable', 'Observaciones']],
+    body: reportData.map(row => [
       formatDate(row.date),
       row.time,
       row.location,
       row.chlorineLevel,
+      row.observations.includes('Cloro cumple: Sí') ? 'Sí' : 'No',
       row.phLevel,
-      row.temperature,
-      row.responsible
+      row.observations.includes('pH cumple: Sí') ? 'Sí' : 'No',
+      row.responsible,
+      'S/N'
     ]),
     theme: 'grid',
+    tableWidth: 'auto', // Ocupa todo el ancho disponible
     headStyles: { 
-      fillColor: PDF_CONFIG.colors.primary,
-      fontSize: PDF_CONFIG.fontSize.normal,
-      fontStyle: 'bold'
-    },
-    styles: { 
-      fontSize: PDF_CONFIG.fontSize.small,
+      fillColor: [91, 91, 255],
+      fontSize: 9,
+      fontStyle: 'bold',
+      halign: 'center',
+      valign: 'middle',
       cellPadding: 3
     },
-    columnStyles: {
-      0: { cellWidth: 25 },
-      1: { cellWidth: 18 },
-      2: { cellWidth: 22 },
-      3: { cellWidth: 22 },
-      4: { cellWidth: 18 },
-      5: { cellWidth: 20 },
-      6: { cellWidth: 'auto' }
-    }
+    styles: { 
+      fontSize: 9,
+      cellPadding: 3,
+      halign: 'center',
+      valign: 'middle'
+    },
+    // Eliminamos columnStyles para que las columnas se distribuyan automáticamente
+    margin: { left: PDF_CONFIG.margin, right: PDF_CONFIG.margin }
   });
   
-  // Agregar resumen
+  // Agregar resumen y rangos normales
   const finalY = doc.lastAutoTable.finalY + 10;
   doc.setFontSize(PDF_CONFIG.fontSize.normal);
   doc.setTextColor(...PDF_CONFIG.colors.text);
-  doc.text(`Total de mediciones: ${sampleData.length}`, PDF_CONFIG.margin, finalY);
+  doc.text(`Total de mediciones: ${reportData.length}`, PDF_CONFIG.margin, finalY);
+  
+  // Agregar rangos normales
+  doc.setFontSize(PDF_CONFIG.fontSize.small);
+  doc.setTextColor(...PDF_CONFIG.colors.gray);
+  doc.text('Rangos normales:', PDF_CONFIG.margin, finalY + 10);
+  doc.text('Cloro: 0.3 - 2.0 ppm', PDF_CONFIG.margin, finalY + 15);
+  doc.text('pH: 6.5 - 9.0', PDF_CONFIG.margin, finalY + 20);
   
   addFooter(doc);
   
@@ -157,55 +155,73 @@ export const generateChlorineReport = (data, dateRange) => {
 };
 
 // 2. LIMPIEZA
+const areasLabels = {
+  pisos: 'Pisos',
+  paredes: 'Paredes',
+  techos: 'Techos',
+  mesones: 'Mesones',
+  puertas: 'Puertas',
+  maquinas: 'Máquinas',
+  microondas: 'Microondas',
+  estufa: 'Estufa',
+  campana: 'Campana',
+  recipienteBasuras: 'Recipiente Basuras',
+  trampaDeGrasa: 'Trampa de Grasa',
+  aseoProfundo: 'Aseo Profundo'
+};
+
 export const generateCleaningReport = (data, dateRange) => {
   const doc = new jsPDF();
   
   addHeader(
     doc,
-    'Informe de Limpieza',
-    `Período: ${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`
-  );
+    'Registro de Limpieza y Desinfección',
+    `Mes: ${new Date(dateRange.start).toLocaleDateString('es-ES', {month: 'long', year: 'numeric'})}`);
   
-  const sampleData = data.length > 0 ? data : [
-    {
-      date: dateRange.start,
-      room: '305',
-      type: 'Check-out',
-      cleaner: 'Ana López',
-      startTime: '09:00',
-      endTime: '10:30',
-      status: 'Completado'
-    },
-    {
-      date: dateRange.start,
-      room: '412',
-      type: 'Limpieza diaria',
-      cleaner: 'Pedro Soto',
-      startTime: '11:00',
-      endTime: '11:45',
-      status: 'Completado'
-    }
-  ];
-  
+ const tableData = data.map(registro => {
+    const fecha = formatDate(registro.date);
+    
+    
+    // Mostrar X para cada área
+    const areas = {};
+    Object.keys(areasLabels).forEach(key => {
+      areas[key] = registro.areas && registro.areas[key] ? 'X' : '-';
+    });
+    
+    return [
+      fecha,
+      areas.pisos,
+      areas.paredes,
+      areas.techos,
+      areas.mesones,
+      areas.puertas,
+      areas.maquinas,
+      areas.microondas,
+      areas.estufa,
+      areas.campana,
+      areas.recipienteBasuras,
+      areas.trampaDeGrasa,
+      areas.aseoProfundo,
+      registro.cleaner,
+      registro.supervisor || 'Sin supervisor',
+      registro.novedades || 'S/N'
+    ];
+  });
+
   doc.autoTable({
     startY: 45,
-    head: [['Fecha', 'Habitación', 'Tipo', 'Encargado', 'Inicio', 'Fin', 'Estado']],
-    body: sampleData.map(row => [
-      formatDate(row.date),
-      row.room,
-      row.type,
-      row.cleaner,
-      row.startTime,
-      row.endTime,
-      row.status
-    ]),
+    head: [[
+      'Fecha',
+      'Piso', 'Paredes', 'Techos', 'Mesones', 'Puertas', 'Máquinas', 'Microondas', 'Estufa', 'Campana', 'Recipiente Basuras', 'Trampa de Grasa', 'Aseo Profundo',
+      'Auxiliar', 'Firma Sup', 'Novedades'
+    ]],
+    body: tableData,
     theme: 'grid',
-    headStyles: { 
-      fillColor: [16, 185, 129],
-      fontSize: PDF_CONFIG.fontSize.normal
-    },
-    styles: { fontSize: PDF_CONFIG.fontSize.small }
+    headStyles: { fontSize: 7, cellPadding: 1 },
+    styles: { fontSize: 6, cellPadding: 1, halign: 'center' }
   });
+    
+    
   
   addFooter(doc);
   return doc;
