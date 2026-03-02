@@ -16,6 +16,7 @@ import {
   FaPiggyBank, FaEdit, FaFilePdf
 } from 'react-icons/fa';
 import '../styles/Turnregister.css';
+import { generateShiftHandoverPDF } from '../utils/shiftHandoverPDF';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const todayStr = new Date().toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -52,7 +53,7 @@ const makeChecks = (type) => Object.fromEntries(CI_CHECKS[type].map(c => [c.key,
 const makeShift = () => ({ checkins: [], invoices: [], income: [], expenses: [], notes: '' });
 
 // ─── Generador de PDF con jsPDF ───────────────────────────────────────────────
-const generatePDF = async (shiftData, shiftKey, receptionistName, cajaMenorSaldo) => {
+/*const generateShiftHandoverPDF = async (shiftData, shiftKey, receptionistName, cajaMenorSaldo) => {
   if (!window.jsPDF) {
     await new Promise((resolve, reject) => {
       const script = document.createElement('script');
@@ -343,7 +344,7 @@ const generatePDF = async (shiftData, shiftKey, receptionistName, cajaMenorSaldo
 
   const filename = `turno_${shiftKey}_${now.toISOString().slice(0, 10)}.pdf`;
   pdf.save(filename);
-};
+};*/
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 export default function TurnRegister() {
@@ -472,7 +473,7 @@ export default function TurnRegister() {
         totals: { ingresos: totalIngresos, alojamiento: totalAloj, lavanderia: totalLav, otros: totalOtros, gastos: totalGastos, facturas: totalInvoices, saldoCajaMenor: cajaMenorSaldo }
       });
 
-      await generatePDF(sd, activeShift, receptionistName, cajaMenorSaldo);
+      await generateShiftHandoverPDF(sd, activeShift, receptionistName, cajaMenorSaldo);
 
       setPendingNextShift(nextShiftKey);
       setNextShiftPassword('');

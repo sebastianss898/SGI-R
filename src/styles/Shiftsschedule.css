@@ -15,7 +15,7 @@
   align-items: center;
   margin-bottom: 20px;
   padding: 20px;
-  background: #13131d;
+  background: #0f0f13;
   border: 1px solid #1e1e2e;
   border-radius: 12px;
 }
@@ -320,8 +320,8 @@
 }
 
 .schedule-table-modern th.weekend {
-  background: #fef3c7;
-  color: #854d0e;
+  background: #a3a3fc;  /* Mismo color que otros días */
+  color: #e0e0f0;       /* Color de texto normal */
 }
 
 .schedule-table-modern th.col-empleado {
@@ -409,7 +409,7 @@
 }
 
 .shift-cell-modern.weekend {
-  background: #fef3c7 !important;
+  border: 1px solid #eb7975;
 }
 
 .shift-cell-modern.editable {

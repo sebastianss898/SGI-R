@@ -103,8 +103,8 @@ export const generateShiftsSchedulePDF = (schedule, employees, month, year) => {
         // Colorear celdas según el turno
         if (data.section === 'body' && data.column.index > 0) {
           const cellValue = data.cell.raw;
-          if (cellValue && TURNOS_COLORS[cellValue]) {
-            const color = TURNOS_COLORS[cellValue];
+          if (cellValue && SHIFT_COLORS[cellValue]) {
+            const color = SHIFT_COLORS[cellValue];
             data.cell.styles.fillColor = hexToRgb(color);
           }
         }
@@ -114,7 +114,7 @@ export const generateShiftsSchedulePDF = (schedule, employees, month, year) => {
           const dayIndex = data.column.index - 1;
           const day = days[dayIndex];
           if (day && day.isWeekend) {
-            data.cell.styles.fillColor = [254, 240, 138]; // Amarillo
+            data.cell.styles.fillColor = [255, 250, 205]; // Amarillo muy suave
             data.cell.styles.textColor = [133, 77, 14];
           }
         }
@@ -190,6 +190,19 @@ const hexToRgb = (hex) => {
     parseInt(result[2], 16),
     parseInt(result[3], 16)
   ] : [255, 255, 255];
+};
+
+// Colores pastel suaves para los turnos
+const SHIFT_COLORS = {
+  '6': '#b3d9ff',      // Azul pastel suave
+  '14': '#ffcba4',     // Naranja/durazno pastel
+  '22': '#d4b5f7',     // Púrpura pastel
+  'V': '#b8e6b8',      // Verde pastel
+  'L': '#e8e8e8',      // Gris muy claro
+  'D': '#ffb3ba',      // Rosa pastel suave
+  'C': '#fffacd',      // Amarillo pastel muy suave
+  'I': '#ffb3ba',      // Rosa pastel suave
+  'CH': '#f0e5d8'      // Beige pastel
 };
 
 // Exportar y descargar

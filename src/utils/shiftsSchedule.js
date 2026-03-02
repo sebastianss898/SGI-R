@@ -1,131 +1,37 @@
 // src/utils/shiftsSchedule.js - Sistema de gestión de turnos
-// Configuración centralizada de turnos con todas sus propiedades
 
-// Paleta de colores personalizada - Diseño coherente y profesional
-const COLOR_PALETTE = {
-  background: '#121826',      // Deep Navy - Fondo Principal
-  primary: {
-    morning: '#7DA0CA',       // Azul Aire (6-14)
-    afternoon: '#D9A18B',     // Arcilla Suave (14-22)
-    night: '#9B99BD',         // Lavanda Gris (22-6)
-  },
-  activities: {
-    vacation: '#8EAC99',      // Verde Salvia (V)
-    rest: '#4A5568',          // Gris Ceniza (L)
-    absence: '#C08B8B',       // Rosa Viejo (D)
-  },
-  text: {
-    primary: '#FFFFFF',       // Blanco para mejor contraste
-    secondary: '#121826',     // Oscuro para elementos claros si es necesario
-  },
+export const TURNOS = {
+  MANANA: '6',
+  TARDE: '14',
+  NOCHE: '22',
+  DESCANSO: 'D',
+  VACACIONES: 'V',
+  CAPACITACION: 'C',
+  INCAPACIDAD: 'I',
+  COMPENSATORIO: 'CH',
 };
 
-const SHIFT_CONFIG = {
-  '6': {
-    label: 'Mañana (6-14)',
-    shortLabel: '6-14',
-    fullText: 'Mañana (6:00-14:00)',
-    hours: 8,
-    bg: COLOR_PALETTE.primary.morning,
-    color: COLOR_PALETTE.text.primary,
-    workingShift: true,
-  },
-  '14': {
-    label: 'Tarde (14-22)',
-    shortLabel: '14-22',
-    fullText: 'Tarde (14:00-22:00)',
-    hours: 8,
-    bg: COLOR_PALETTE.primary.afternoon,
-    color: COLOR_PALETTE.text.primary,
-    workingShift: true,
-  },
-  '22': {
-    label: 'Noche (22-6)',
-    shortLabel: '22-6',
-    fullText: 'Noche (22:00-6:00)',
-    hours: 8,
-    bg: COLOR_PALETTE.primary.night,
-    color: COLOR_PALETTE.text.primary,
-    workingShift: true,
-  },
-  'D': {
-    label: 'Descanso',
-    shortLabel: 'D',
-    fullText: 'Descanso',
-    hours: 0,
-    bg: COLOR_PALETTE.activities.absence,
-    color: COLOR_PALETTE.text.primary,
-    workingShift: false,
-  },
-  'V': {
-    label: 'Vacaciones',
-    shortLabel: 'V',
-    fullText: 'Vacaciones',
-    hours: 0,
-    bg: COLOR_PALETTE.activities.vacation,
-    color: COLOR_PALETTE.text.primary,
-    workingShift: false,
-  },
-  'L': {
-    label: 'Libre',
-    shortLabel: 'L',
-    fullText: 'Libre',
-    hours: 0,
-    bg: COLOR_PALETTE.activities.rest,
-    color: COLOR_PALETTE.text.primary,
-    workingShift: false,
-  },
-  'C': {
-    label: 'Capacitación',
-    shortLabel: 'C',
-    fullText: 'Capacitación',
-    hours: 8,
-    bg: COLOR_PALETTE.primary.morning,
-    color: COLOR_PALETTE.text.primary,
-    workingShift: true,
-  },
-  'I': {
-    label: 'Incapacidad',
-    shortLabel: 'I',
-    fullText: 'Incapacidad',
-    hours: 0,
-    bg: COLOR_PALETTE.activities.absence,
-    color: COLOR_PALETTE.text.primary,
-    workingShift: false,
-  },
-  'CH': {
-    label: 'Compensatorio',
-    shortLabel: 'CH',
-    fullText: 'Compensatorio',
-    hours: 8,
-    bg: COLOR_PALETTE.activities.vacation,
-    color: COLOR_PALETTE.text.primary,
-    workingShift: true,
-  },
+export const TURNOS_LABELS = {
+  [TURNOS.MANANA]: 'Mañana (6-14)',
+  [TURNOS.TARDE]: 'Tarde (14-22)',
+  [TURNOS.NOCHE]: 'Noche (22-6)',
+  [TURNOS.DESCANSO]: 'Descanso',
+  [TURNOS.VACACIONES]: 'Vacaciones',
+  [TURNOS.CAPACITACION]: 'Capacitación',
+  [TURNOS.INCAPACIDAD]: 'Incapacidad',
+  [TURNOS.COMPENSATORIO]: 'Compensatorio',
 };
 
-// Generar constantes dinámicamente desde la configuración
-export const TURNOS = Object.keys(SHIFT_CONFIG).reduce((acc, key) => {
-  const name = key.replace(/-/g, '_').toUpperCase();
-  acc[name] = key;
-  return acc;
-}, {});
-
-export const TURNOS_LABELS = Object.keys(SHIFT_CONFIG).reduce((acc, key) => {
-  acc[key] = SHIFT_CONFIG[key].label;
-  return acc;
-}, {});
-
-export const TURNOS_COLORS = Object.keys(SHIFT_CONFIG).reduce((acc, key) => {
-  acc[key] = SHIFT_CONFIG[key].bg;
-  return acc;
-}, {});
-
-// Función auxiliar para obtener configuración completa de un turno
-export const getShiftConfig = (shiftCode) => SHIFT_CONFIG[shiftCode] || null;
-
-// Función auxiliar para obtener horas de un turno
-export const getShiftHours = (shiftCode) => SHIFT_CONFIG[shiftCode]?.hours || 0;
+export const TURNOS_COLORS = {
+  [TURNOS.MANANA]: '#b3d9ff',      // Azul pastel suave
+  [TURNOS.TARDE]: '#ffcba4',       // Naranja/durazno pastel
+  [TURNOS.NOCHE]: '#d4b5f7',       // Púrpura pastel
+  [TURNOS.DESCANSO]: '#e8e8e8',    // Gris muy claro
+  [TURNOS.VACACIONES]: '#b8e6b8',  // Verde pastel
+  [TURNOS.CAPACITACION]: '#fffacd', // Amarillo pastel muy suave
+  [TURNOS.INCAPACIDAD]: '#ffb3ba', // Rosa pastel suave
+  [TURNOS.COMPENSATORIO]: '#f0e5d8', // Beige pastel
+};
 
 export const DEPARTAMENTOS = {
   RECEPCION: 'recepcion',
@@ -165,19 +71,27 @@ export const getDaysInMonth = (year, month) => {
 
 // Calcular horas trabajadas en el mes
 export const calculateHoursWorked = (shifts) => {
+  const hoursPerShift = {
+    [TURNOS.MANANA]: 8,
+    [TURNOS.TARDE]: 8,
+    [TURNOS.NOCHE]: 8,
+    [TURNOS.DESCANSO]: 0,
+    [TURNOS.VACACIONES]: 0,
+    [TURNOS.CAPACITACION]: 8,
+    [TURNOS.INCAPACIDAD]: 0,
+    [TURNOS.COMPENSATORIO]: 8,
+  };
+  
   let totalHours = 0;
   let daysWorked = 0;
   let daysOff = 0;
   
   Object.values(shifts).forEach(shift => {
-    const config = getShiftConfig(shift);
-    if (!config) return;
-    
-    const hours = config.hours;
+    const hours = hoursPerShift[shift] || 0;
     totalHours += hours;
     
-    if (config.workingShift) daysWorked++;
-    if (shift === 'D') daysOff++;
+    if (hours > 0) daysWorked++;
+    if (shift === TURNOS.DESCANSO) daysOff++;
   });
   
   return { totalHours, daysWorked, daysOff };
@@ -192,8 +106,8 @@ export const validateSchedule = (shifts, month, year) => {
   const stats = calculateHoursWorked(shifts);
   
   // Máximo de horas mensuales (aprox 240 horas = 30 días x 8 horas)
-  if (stats.totalHours > 240) {
-    warnings.push(`Total de horas (${stats.totalHours}) excede el máximo recomendado de 240 horas`);
+  if (stats.totalHoras > 240) {
+    warnings.push(`Total de horas (${stats.totalHoras}) excede el máximo recomendado de 240 horas`);
   }
   
   // Mínimo de días de descanso (aprox 4 por mes)
@@ -205,9 +119,7 @@ export const validateSchedule = (shifts, month, year) => {
   let consecutiveWorkDays = 0;
   days.forEach(day => {
     const shift = shifts[day.day];
-    const config = getShiftConfig(shift);
-    
-    if (config?.workingShift) {
+    if (shift && shift !== TURNOS.DESCANSO && shift !== TURNOS.VACACIONES) {
       consecutiveWorkDays++;
       if (consecutiveWorkDays > 6) {
         errors.push(`Más de 6 días consecutivos de trabajo (día ${day.day})`);
@@ -242,34 +154,4 @@ export const formatMonthYear = (month, year) => {
 export const getDayName = (dayOfWeek) => {
   const names = ['DO', 'LU', 'MA', 'MI', 'JU', 'VI', 'SÁ'];
   return names[dayOfWeek];
-};
-
-// Funciones auxiliares para análisis de turnos
-export const countShiftType = (shifts, shiftCode) => {
-  return Object.values(shifts).filter(shift => shift === shiftCode).length;
-};
-
-// Obtener resumen estadístico del horario
-export const getScheduleSummary = (shifts) => {
-  const stats = calculateHoursWorked(shifts);
-  const summary = {
-    ...stats,
-    shiftCounts: {}
-  };
-  
-  Object.keys(SHIFT_CONFIG).forEach(shiftCode => {
-    summary.shiftCounts[shiftCode] = countShiftType(shifts, shiftCode);
-  });
-  
-  return summary;
-};
-
-// Validar si un turno es válido
-export const isValidShift = (shiftCode) => {
-  return shiftCode in SHIFT_CONFIG;
-};
-
-// Obtener todos los códigos de turno disponibles
-export const getAvailableShifts = () => {
-  return Object.keys(SHIFT_CONFIG);
 };

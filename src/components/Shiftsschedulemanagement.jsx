@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, getDoc, setDoc, getDocs } from 'firebase/firestore';
-import { FaCalendarAlt, FaSave, FaTimes, FaFilePdf, FaBell } from 'react-icons/fa';
+import { FaCalendarAlt, FaSave, FaTimes, FaFilePdf, FaBell, FaPlus, FaTrash } from 'react-icons/fa';
 import {
-  getDaysInMonth, generateScheduleId,
-  getDayName, getShiftConfig, TURNOS_LABELS
+  TURNOS, TURNOS_LABELS, getDaysInMonth, generateScheduleId,
+  formatMonthYear, getDayName
 } from '../utils/shiftsSchedule';
 import { downloadShiftsSchedulePDF } from '../utils/shiftsSchedulePDF';
 import '../styles/Shiftsschedule.css';
@@ -14,6 +14,7 @@ const ShiftsScheduleManagement = ({ currentUser }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [schedule, setSchedule] = useState(null);
   const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
   
   // Selection mode states
   const [selectionMode, setSelectionMode] = useState(false);
@@ -25,71 +26,18 @@ const ShiftsScheduleManagement = ({ currentUser }) => {
   const days = getDaysInMonth(selectedYear, selectedMonth);
 
   const shiftTypes = {
-    '6': {
-    label: '6-14',
-    bg: '#3b82f6', // azul brillante balanceado
-    text: 'Mañana (6:00-14:00)'
-  },
-
-  '14': {
-    label: '14-22',
-    bg: '#f97316', // naranja más intenso y visible en dark
-    text: 'Tarde (14:00-22:00)'
-  },
-
-  '22': {
-    label: '22-6',
-    bg: '#8b5cf6', // violeta más limpio y moderno
-    text: 'Noche (22:00-6:00)'
-  },
-
-  'V': {
-    label: 'V',
-    bg: '#22c55e', // verde más profesional
-    text: 'Vacaciones'
-  },
-
-  'L': {
-    label: 'L',
-    bg: '#6b7280', // gris visible en dark mode
-    text: 'Libre'
-  },
-
-  'D': {
-    label: 'D',
-    bg: '#ef4444', // rojo más claro y visible
-    text: 'Descanso'
-  }
+    '6': { label: '6-14', bg: '#b3d9ff', text: 'Mañana (6:00-14:00)' },      // Azul pastel suave
+    '14': { label: '14-22', bg: '#ffcba4', text: 'Tarde (14:00-22:00)' },    // Naranja/durazno pastel
+    '22': { label: '22-6', bg: '#d4b5f7', text: 'Noche (22:00-6:00)' },      // Púrpura pastel
+    'V': { label: 'V', bg: '#b8e6b8', text: 'Vacaciones' },                  // Verde pastel
+    'L': { label: 'L', bg: '#e8e8e8', text: 'Libre' },                       // Gris muy claro
+    'D': { label: 'D', bg: '#ffb3ba', text: 'Descanso' }                     // Rosa pastel suave
   };
-
-  const loadSchedule = useCallback(async () => {
-    try {
-      const scheduleId = generateScheduleId(selectedMonth, selectedYear);
-      const scheduleDoc = await getDoc(doc(db, 'shiftsSchedule', scheduleId));
-
-      if (scheduleDoc.exists()) {
-        setSchedule(scheduleDoc.data());
-      } else {
-        const emptySchedule = {
-          month: selectedMonth,
-          year: selectedYear,
-          scheduleId,
-          published: false,
-          shifts: {},
-          createdAt: new Date(),
-          createdBy: currentUser.id
-        };
-        setSchedule(emptySchedule);
-      }
-    } catch (error) {
-      console.error('Error loading schedule:', error);
-    }
-  }, [selectedMonth, selectedYear, currentUser.id]);
 
   useEffect(() => {
     loadEmployees();
     loadSchedule();
-  }, [selectedMonth, selectedYear, loadSchedule]);
+  }, [selectedMonth, selectedYear]);
 
   const loadEmployees = async () => {
     try {
@@ -112,7 +60,32 @@ const ShiftsScheduleManagement = ({ currentUser }) => {
     }
   };
 
+  const loadSchedule = async () => {
+    setLoading(true);
+    try {
+      const scheduleId = generateScheduleId(selectedMonth, selectedYear);
+      const scheduleDoc = await getDoc(doc(db, 'shiftsSchedule', scheduleId));
 
+      if (scheduleDoc.exists()) {
+        setSchedule(scheduleDoc.data());
+      } else {
+        const emptySchedule = {
+          month: selectedMonth,
+          year: selectedYear,
+          scheduleId,
+          published: false,
+          shifts: {},
+          createdAt: new Date(),
+          createdBy: currentUser.id
+        };
+        setSchedule(emptySchedule);
+      }
+    } catch (error) {
+      console.error('Error loading schedule:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleDaySelection = (employeeId, dayIndex) => {
     if (!canEdit) return;
@@ -450,8 +423,8 @@ const ShiftsScheduleManagement = ({ currentUser }) => {
                         return (
                           <td
                             key={day.day}
-                            className={`shift-cell-modern ${day.isWeekend ? 'weekend' : ''} ${canEdit ? 'editable' : ''} ${isSelected ? 'selected' : ''}`}
-                            style={{ background: value ? getCellColor(emp.id, day.day) : (day.isWeekend ? '#f17878' : '') }}
+                            className={`shift-cell-modern ${canEdit ? 'editable' : ''} ${isSelected ? 'selected' : ''}`}
+                            style={{ background: value ? getCellColor(emp.id, day.day) : '' }} //style={{ background: day.isWeekend ? '#fef3c7' : '' }} <= cambia color por dias especiales Domigos 
                             onClick={() => toggleDaySelection(emp.id, idx)}
                           >
                             <div className="cell-content">
