@@ -14,6 +14,7 @@ import './styles/globalStyles.css';
 import AlertsManagement from './components/AlertsManagement';
 import AlertsSeeder from './components/AlertsSeeder';
 import ReportsManagement from './components/Reportsmanagement';
+import ShiftsScheduleManagement from './components/Shiftsschedulemanagement';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -118,6 +119,15 @@ function App() {
       userRole={currentUser.role}
     >
       <ReportsManagement currentUser={currentUser} />
+    </ProtectedRoute>
+  );
+  case 'horarios':
+  return (
+    <ProtectedRoute 
+      requiredPermission={PERMISSIONS.VIEW_SHIFTS_SCHEDULE}
+      userRole={currentUser.role}
+    >
+      <ShiftsScheduleManagement currentUser={currentUser} />
     </ProtectedRoute>
   );
       default:

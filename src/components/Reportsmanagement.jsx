@@ -19,6 +19,7 @@ import {
   generateFinancesReport,
   generateOccupancyReport
 } from '../utils/pdfGenerator';
+import { fetchReportData } from '../utils/reportDataFetcher';
 import '../styles/Reportsmanagement.css';
 
 const ReportsManagement = ({ currentUser }) => {
@@ -89,14 +90,33 @@ const ReportsManagement = ({ currentUser }) => {
     setIsGenerating(true);
 
     try {
-      // Aquí iría la lógica para obtener datos reales de Firebase
-      // Por ahora usaremos datos de muestra incluidos en las funciones
-      const data = []; // await fetchDataFromFirebase(selectedReport, dateRange);
+      // 1. Obtener datos reales desde Firebase
+      console.log('📊 Obteniendo datos desde Firebase...');
+      const data = await fetchReportData(selectedReport, dateRange.start, dateRange.end);
       
+      console.log(`✅ ${data.length} registros obtenidos`);
+      
+      // 2. Verificar si hay datos
+      if (data.length === 0) {
+        const useEmptyReport = window.confirm(
+          'No se encontraron datos para el período seleccionado.\n\n' +
+          '¿Deseas generar el reporte con datos de ejemplo?\n\n' +
+          'Click "Aceptar" para generar con ejemplos.\n' +
+          'Click "Cancelar" para intentar con otras fechas.'
+        );
+        
+        if (!useEmptyReport) {
+          setIsGenerating(false);
+          return;
+        }
+      }
+      
+      // 3. Generar PDF según el tipo
       let doc;
       const filename = generateReportFilename(selectedReport, dateRange);
       
-      // Generar PDF según el tipo
+      console.log(`📄 Generando PDF: ${filename}`);
+      
       switch(selectedReport) {
         case REPORT_TYPES.CHLORINE:
           doc = generateChlorineReport(data, dateRange);
@@ -126,10 +146,11 @@ const ReportsManagement = ({ currentUser }) => {
           throw new Error('Tipo de reporte no soportado');
       }
       
-      // Descargar el PDF
+      // 4. Descargar el PDF
       doc.save(filename);
+      console.log('✅ PDF descargado exitosamente');
       
-      // Guardar en historial
+      // 5. Guardar en historial
       const newReport = {
         id: Date.now(),
         type: selectedReport,
@@ -138,15 +159,25 @@ const ReportsManagement = ({ currentUser }) => {
         generatedAt: new Date().toLocaleString('es-CL'),
         generatedBy: currentUser.name,
         filename: filename,
+        dataCount: data.length,
         pdfDoc: doc // Guardar referencia al documento
       };
       
       setRecentReports([newReport, ...recentReports.slice(0, 4)]);
       
-      alert('✅ Reporte generado y descargado exitosamente');
+      // 6. Mensaje de éxito
+      alert(
+        `✅ Reporte generado exitosamente\n\n` +
+        `Registros incluidos: ${data.length}\n` +
+        `Archivo: ${filename}`
+      );
     } catch (error) {
-      console.error('Error generando reporte:', error);
-      alert('❌ Error al generar reporte: ' + error.message);
+      console.error('❌ Error generando reporte:', error);
+      alert(
+        '❌ Error al generar reporte:\n\n' + 
+        error.message + '\n\n' +
+        'Verifica la consola para más detalles.'
+      );
     } finally {
       setIsGenerating(false);
     }

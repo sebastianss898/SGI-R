@@ -10,7 +10,8 @@ import {
   FaHistory,
   FaUsers,
   FaChartLine,
-  FaFileDownload  
+  FaFileDownload,
+  FaCalendarAlt  
 } from 'react-icons/fa';
 import { hasPermission, PERMISSIONS, ROLE_LABELS } from '../utils/roles';
 import '../styles/sidebar.css';
@@ -60,6 +61,12 @@ const Sidebar = ({ isOpen, currentView, setCurrentView, currentUser }) => {
     label: "Reportes", 
     icon: <FaFileDownload />, 
     permission: PERMISSIONS.VIEW_REPORTS_PAGE 
+    },
+    { 
+    id: "horarios", 
+    label: "Horarios", 
+    icon: <FaCalendarAlt />, 
+    permission: PERMISSIONS.VIEW_SHIFTS_SCHEDULE 
     },
   ];
 
