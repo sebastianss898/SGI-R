@@ -1,6 +1,6 @@
 // src/utils/pdfGenerator.js - Generador real de PDFs
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+//import autoTable from 'jspdf-autotable';
 
 // Configuración general
 const PDF_CONFIG = {
@@ -528,3 +528,48 @@ export const generateOccupancyReport = (data, dateRange) => {
   addFooter(doc);
   return doc;
 };
+
+// 9. TEMPERATURAS
+export const generateTemperatureReport = (data, dateRange) => {
+  const doc = new jsPDF();
+  
+  addHeader(
+    doc,
+    'Informe de Temperaturas en Áreas Críticas',
+    `Período: ${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`
+  );  
+
+  const sampleData = data.length > 0 ? data : [
+    {
+      date: dateRange.start,
+      totalRooms: 50,
+      occupied: 38,
+      available: 12,
+      occupancyRate: 76,
+      revenue: 1250000
+    }
+  ];
+  
+  doc.autoTable({
+    startY: 45,
+    head: [['Fecha', 'Total Hab.', 'Ocupadas', 'Disponibles', 'Tasa %', 'Ingresos']],
+    body: sampleData.map(row => [
+      formatDate(row.date),
+      row.totalRooms,
+      row.occupied,
+      row.available,
+      `${row.occupancyRate}%`,
+      `$${row.revenue.toLocaleString('es-CL')}`
+    ]),
+    theme: 'grid',
+    headStyles: { 
+      fillColor: [236, 72, 153],
+      fontSize: PDF_CONFIG.fontSize.normal
+    },
+    styles: { fontSize: PDF_CONFIG.fontSize.small }
+  });
+  
+  addFooter(doc);
+  return doc;
+};
+  

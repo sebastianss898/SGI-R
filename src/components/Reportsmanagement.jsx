@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  FaFileDownload, FaFilePdf, FaCalendar, FaFilter,
+  FaFileDownload, FaFilePdf, FaCalendar,
   FaChartLine, FaClock, FaCheckCircle, FaSearch
 } from 'react-icons/fa';
 import {
@@ -17,7 +17,8 @@ import {
   generateMaintenanceReport,
   generateShiftsReport,
   generateFinancesReport,
-  generateOccupancyReport
+  generateOccupancyReport,
+  generateTemperatureReport
 } from '../utils/pdfGenerator';
 import { fetchReportData } from '../utils/reportDataFetcher';
 import '../styles/Reportsmanagement.css';
@@ -141,6 +142,9 @@ const ReportsManagement = ({ currentUser }) => {
           break;
         case REPORT_TYPES.OCCUPANCY:
           doc = generateOccupancyReport(data, dateRange);
+          break;
+        case REPORT_TYPES.TEMPERATURE:
+          doc = generateTemperatureReport(data, dateRange);
           break;
         default:
           throw new Error('Tipo de reporte no soportado');

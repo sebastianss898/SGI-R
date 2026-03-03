@@ -4,6 +4,7 @@ export const REPORT_TYPES = {
   CHLORINE: 'chlorine',
   CLEANING: 'cleaning',
   SAMPLES: 'samples',
+  TEMPERATURE: 'temperature',
   RECEPTION: 'reception',
   MAINTENANCE: 'maintenance',
   SHIFTS: 'shifts',
@@ -27,6 +28,7 @@ export const REPORT_LABELS = {
   [REPORT_TYPES.SHIFTS]: 'Turnos y Entregas',
   [REPORT_TYPES.FINANCES]: 'Finanzas y Caja',
   [REPORT_TYPES.OCCUPANCY]: 'Ocupación Hotelera',
+  [REPORT_TYPES.TEMPERATURE]: 'Control de Temperatura',
 };
 
 export const REPORT_DESCRIPTIONS = {
@@ -38,6 +40,7 @@ export const REPORT_DESCRIPTIONS = {
   [REPORT_TYPES.SHIFTS]: 'Entregas de turno y handover entre personal',
   [REPORT_TYPES.FINANCES]: 'Ingresos, gastos y cuadre de caja',
   [REPORT_TYPES.OCCUPANCY]: 'Tasa de ocupación y estadísticas de habitaciones',
+  [REPORT_TYPES.TEMPERATURE]: 'Registro de temperaturas en áreas críticas',
 };
 
 export const REPORT_ICONS = {
@@ -49,6 +52,7 @@ export const REPORT_ICONS = {
   [REPORT_TYPES.SHIFTS]: '🔄',
   [REPORT_TYPES.FINANCES]: '💰',
   [REPORT_TYPES.OCCUPANCY]: '📊',
+  [REPORT_TYPES.TEMPERATURE]: '🌡️',
 };
 
 export const REPORT_COLORS = {
@@ -60,6 +64,7 @@ export const REPORT_COLORS = {
   [REPORT_TYPES.SHIFTS]: '#6366f1',
   [REPORT_TYPES.FINANCES]: '#10b981',
   [REPORT_TYPES.OCCUPANCY]: '#ec4899',
+  [REPORT_TYPES.TEMPERATURE]: '#ef4444',
 };
 
 export const REPORT_CATEGORY_MAP = {
@@ -71,6 +76,7 @@ export const REPORT_CATEGORY_MAP = {
   [REPORT_TYPES.SHIFTS]: REPORT_CATEGORIES.OPERATIONS,
   [REPORT_TYPES.FINANCES]: REPORT_CATEGORIES.ADMINISTRATION,
   [REPORT_TYPES.OCCUPANCY]: REPORT_CATEGORIES.ADMINISTRATION,
+  [REPORT_TYPES.TEMPERATURE]: REPORT_CATEGORIES.QUALITY,
 };
 
 export const REPORT_FREQUENCY = {
@@ -157,6 +163,20 @@ export const REPORT_TEMPLATES = {
   },
   
   [REPORT_TYPES.MAINTENANCE]: {
+    fields: [
+      { name: 'date', label: 'Fecha', type: 'date' },
+      { name: 'workOrderId', label: 'Orden de Trabajo', type: 'text' },
+      { name: 'type', label: 'Tipo', type: 'select', options: ['Correctivo', 'Preventivo', 'Emergencia'] },
+      { name: 'location', label: 'Ubicación', type: 'text' },
+      { name: 'description', label: 'Descripción', type: 'textarea' },
+      { name: 'technician', label: 'Técnico', type: 'text' },
+      { name: 'priority', label: 'Prioridad', type: 'select', options: ['Baja', 'Media', 'Alta', 'Urgente'] },
+      { name: 'status', label: 'Estado', type: 'select', options: ['Pendiente', 'En proceso', 'Completado'] },
+      { name: 'materials', label: 'Materiales Utilizados', type: 'textarea' },
+      { name: 'cost', label: 'Costo', type: 'number' },
+    ]
+  },
+  [REPORT_TYPES.TEMPERATURE]: {
     fields: [
       { name: 'date', label: 'Fecha', type: 'date' },
       { name: 'workOrderId', label: 'Orden de Trabajo', type: 'text' },
