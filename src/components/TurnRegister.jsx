@@ -13,10 +13,11 @@ import {
   FaUser, FaClock, FaBed,
   FaFileInvoiceDollar, FaWallet,
   FaArrowUp, FaSpinner,
-  FaPiggyBank, FaEdit, FaFilePdf
+  FaPiggyBank, FaEdit, FaFilePdf,FaFileAlt
 } from 'react-icons/fa';
 import '../styles/Turnregister.css';
 import { generateShiftHandoverPDF } from '../utils/shiftHandoverPDF';
+import NightAuditModal from './NightAuditModal';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const todayStr = new Date().toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -534,6 +535,7 @@ export default function TurnRegister() {
   };
 
   const activeChecks = CI_CHECKS[ciForm.type];
+  const [showNightAudit, setShowNightAudit] = useState(false);
 
   return (
     <div className="tr-root">
@@ -543,25 +545,37 @@ export default function TurnRegister() {
           <p>Gestión de operaciones · Hotel Cytrico</p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <div className="receptionist-badge">
-            <FaUser />
-            <select 
-              value={receptionistName} 
-              onChange={e => setReceptionistName(e.target.value)}
-            >
-              <option value="">Selecciona recepcionista...</option>
-              {receptionists.map((user, idx) => (
-                <option key={idx} value={user.name}>
-                  {user.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="tr-date-badge">
-            <FaClock />
-            <span style={{ textTransform: 'capitalize' }}>{todayStr}</span>
-          </div>
-        </div>
+  <div className="receptionist-badge">
+    <FaUser />
+    <select 
+      value={receptionistName} 
+      onChange={e => setReceptionistName(e.target.value)}
+    >
+      <option value="">Selecciona recepcionista...</option>
+      {receptionists.map((user, idx) => (
+        <option key={idx} value={user.name}>
+          {user.name}
+        </option>
+      ))}
+    </select>
+  </div>
+  
+  {/* NUEVO: Botón de Auditoría Nocturna */}
+  {activeShift === 'night' && (
+    <button 
+      className="btn-night-audit"
+      onClick={() => setShowNightAudit(true)}
+      title="Generar auditoría nocturna (solo turno noche)"
+    >
+      <FaFileAlt /> Auditoría Nocturna
+    </button>
+  )}
+  
+  <div className="tr-date-badge">
+    <FaClock />
+    <span style={{ textTransform: 'capitalize' }}>{todayStr}</span>
+  </div>
+</div>
       </header>
 
       <div className="tr-shift-tabs">
@@ -778,6 +792,7 @@ export default function TurnRegister() {
             }
           </div>
         </div>
+        
 
         {/* Gastos caja menor */}
         <div className="tr-panel tr-full">
@@ -914,6 +929,12 @@ export default function TurnRegister() {
       )}
 
       {toast && <div className={`tr-toast ${toast.type}`}>{toast.msg}</div>}
+      {/* Modal de Auditoría Nocturna */}
+      <NightAuditModal 
+        isOpen={showNightAudit}
+        onClose={() => setShowNightAudit(false)}
+        currentShift={activeShift}
+      />
     </div>
   );
 }
