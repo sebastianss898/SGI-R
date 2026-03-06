@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { FaUser, FaLock, FaEye, FaEyeSlash, FaHotel } from 'react-icons/fa';
+import { FaUser, FaLock, FaEye, FaEyeSlash, FaHotel,FaChartBar,FaChartLine,FaCheck   } from 'react-icons/fa';
 import '../styles/login.css';
 
 const Login = ({ onLoginSuccess }) => {
@@ -72,10 +72,11 @@ const Login = ({ onLoginSuccess }) => {
         <div className="login-left">
           <div className="login-brand">
             <div className="brand-icon">
-              <FaHotel />
+              <FaChartBar  />
             </div>
-            <h1>Hotel Cytrico</h1>
-            <p>Sistema de Gestión Hotelera</p>
+       
+            <h1>SGI</h1>
+            <p>Sistema de Gestión Integral</p>
           </div>
           <div className="login-features">
             <div className="feature-item">
@@ -173,7 +174,10 @@ const Login = ({ onLoginSuccess }) => {
               <a href="#" onClick={(e) => { e.preventDefault(); alert('Contacta al administrador'); }}>
                 Contactar administrador
               </a>
+              <p>&copy; 2024 SGI. Todos los derechos reservados.</p>
+              <p>SG1 - DEVELOPED BY S-1</p>
             </div>
+            
           </div>
         </div>
       </div>

@@ -52,307 +52,28 @@ const CI_CHECKS = {
 };
 const makeChecks = (type) => Object.fromEntries(CI_CHECKS[type].map(c => [c.key, false]));
 const makeShift = () => ({ checkins: [], invoices: [], income: [], expenses: [], notes: '' });
+ 
+const STORAGE_KEY = 'turnregister_state';
 
-// ─── Generador de PDF con jsPDF ───────────────────────────────────────────────
-/*const generateShiftHandoverPDF = async (shiftData, shiftKey, receptionistName, cajaMenorSaldo) => {
-  if (!window.jsPDF) {
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  }
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+const saveToStorage = (state) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) { console.warn('No se pudo guardar estado local', e); }
+};
 
-  const W = 210;
-  const margin = 18;
-  let y = 0;
-
-  const shift = SHIFTS[shiftKey];
-  const now = new Date();
-  const dateLabel = now.toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeLabel = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-
-  // ── Cabecera ──
-  pdf.setFillColor(15, 15, 19);
-  pdf.rect(0, 0, W, 38, 'F');
-  pdf.setTextColor(240, 237, 232);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(18);
-  pdf.text('Hotel Cytrico', margin, 16);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9);
-  pdf.setTextColor(150, 150, 180);
-  pdf.text('Reporte de Entrega de Turno', margin, 24);
-  pdf.text(`${dateLabel}  •  ${timeLabel}`, margin, 30);
-
-  pdf.setFillColor(30, 30, 46);
-  pdf.roundedRect(W - margin - 50, 8, 50, 22, 4, 4, 'F');
-  pdf.setTextColor(200, 200, 230);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(11);
-  pdf.text(`Turno ${shift.label}`, W - margin - 25, 18, { align: 'center' });
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
-  pdf.setTextColor(130, 130, 160);
-  pdf.text(shift.hours, W - margin - 25, 25, { align: 'center' });
-
-  y = 46;
-
-  pdf.setFillColor(22, 22, 34);
-  pdf.roundedRect(margin, y, W - margin * 2, 14, 3, 3, 'F');
-  pdf.setTextColor(150, 150, 200);
-  pdf.setFontSize(8);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text('RECEPCIONISTA SALIENTE', margin + 4, y + 5.5);
-  pdf.setTextColor(220, 220, 240);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
-  pdf.text(receptionistName || 'Sin nombre', margin + 4, y + 11);
-  y += 20;
-
-  const sectionTitle = (title, color) => {
-    pdf.setFillColor(...color);
-    pdf.rect(margin, y, 3, 6, 'F');
-    pdf.setTextColor(200, 200, 230);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10);
-    pdf.text(title, margin + 6, y + 5);
-    y += 10;
-  };
-
-  const tableHeader = (cols) => {
-    pdf.setFillColor(20, 20, 30);
-    pdf.rect(margin, y, W - margin * 2, 7, 'F');
-    pdf.setTextColor(100, 100, 140);
-    pdf.setFontSize(7.5);
-    pdf.setFont('helvetica', 'bold');
-    cols.forEach(([text, x, align]) => pdf.text(text, x, y + 5, { align: align || 'left' }));
-    y += 7;
-  };
-
-  const tableRow = (cols, bg) => {
-    if (bg) { pdf.setFillColor(...bg); pdf.rect(margin, y, W - margin * 2, 7, 'F'); }
-    pdf.setTextColor(190, 190, 210);
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'normal');
-    cols.forEach(([text, x, align, color]) => {
-      if (color) pdf.setTextColor(...color); else pdf.setTextColor(190, 190, 210);
-      pdf.text(String(text), x, y + 5, { align: align || 'left' });
-    });
-    y += 7;
-  };
-
-  const divider = () => {
-    pdf.setDrawColor(30, 30, 46);
-    pdf.line(margin, y, W - margin, y);
-    y += 4;
-  };
-
-  const totalIngresos = shiftData.income.reduce((s, i) => s + i.amount, 0);
-  const totalAloj = shiftData.income.filter(i => i.type === 'alojamiento').reduce((s, i) => s + i.amount, 0);
-  const totalLav = shiftData.income.filter(i => i.type === 'lavanderia').reduce((s, i) => s + i.amount, 0);
-  const totalOtros = shiftData.income.filter(i => i.type === 'otro').reduce((s, i) => s + i.amount, 0);
-  const totalGastos = shiftData.expenses.reduce((s, i) => s + i.amount, 0);
-  const totalFacturas = shiftData.invoices.reduce((s, i) => s + i.amount, 0);
-
-  const boxW = (W - margin * 2 - 6) / 2;
-  pdf.setFillColor(13, 40, 24);
-  pdf.roundedRect(margin, y, boxW, 28, 3, 3, 'F');
-  pdf.setTextColor(80, 160, 100);
-  pdf.setFontSize(7.5); pdf.setFont('helvetica', 'bold');
-  pdf.text('CAJA PRINCIPAL — INGRESOS', margin + 4, y + 6);
-  pdf.setTextColor(74, 222, 128);
-  pdf.setFontSize(15); pdf.setFont('helvetica', 'bold');
-  pdf.text(fmt(totalIngresos), margin + 4, y + 16);
-  pdf.setTextColor(80, 140, 90); pdf.setFontSize(7.5); pdf.setFont('helvetica', 'normal');
-  pdf.text(`Aloj. ${fmt(totalAloj)}  Lav. ${fmt(totalLav)}  Otros ${fmt(totalOtros)}`, margin + 4, y + 24);
-
-  pdf.setFillColor(26, 20, 40);
-  pdf.roundedRect(margin + boxW + 6, y, boxW, 28, 3, 3, 'F');
-  pdf.setTextColor(100, 80, 160);
-  pdf.setFontSize(7.5); pdf.setFont('helvetica', 'bold');
-  pdf.text('CAJA MENOR — SALDO RESTANTE', margin + boxW + 10, y + 6);
-  pdf.setTextColor(192, 132, 252);
-  pdf.setFontSize(15); pdf.setFont('helvetica', 'bold');
-  pdf.text(fmt(cajaMenorSaldo ?? 0), margin + boxW + 10, y + 16);
-  pdf.setTextColor(100, 80, 140); pdf.setFontSize(7.5); pdf.setFont('helvetica', 'normal');
-  pdf.text(`Gastos del turno: ${fmt(totalGastos)}`, margin + boxW + 10, y + 24);
-  y += 34;
-
-  if (shiftData.income.length > 0) {
-    sectionTitle('INGRESOS — CAJA PRINCIPAL', [74, 222, 128]);
-    tableHeader([
-      ['Tipo', margin + 2, 'left'],
-      ['Detalle', margin + 35, 'left'],
-      ['Método', margin + 110, 'left'],
-      ['Monto', W - margin - 2, 'right'],
-    ]);
-    shiftData.income.forEach((inc, i) => {
-      tableRow([
-        [inc.typeLabel, margin + 2, 'left'],
-        [inc.concept || '—', margin + 35, 'left'],
-        [inc.method, margin + 110, 'left'],
-        [fmt(inc.amount), W - margin - 2, 'right', [74, 222, 128]],
-      ], i % 2 === 0 ? [18, 18, 28] : null);
-    });
-    pdf.setFillColor(13, 40, 24);
-    pdf.rect(margin, y, W - margin * 2, 8, 'F');
-    pdf.setTextColor(74, 222, 128); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
-    pdf.text('TOTAL INGRESOS', margin + 4, y + 5.5);
-    pdf.text(fmt(totalIngresos), W - margin - 2, y + 5.5, { align: 'right' });
-    y += 12;
-    divider();
-  }
-
-  if (shiftData.invoices.length > 0) {
-    sectionTitle('FACTURAS EMITIDAS', [96, 165, 250]);
-    tableHeader([
-      ['N° Factura', margin + 2, 'left'],
-      ['Cliente', margin + 45, 'left'],
-      ['Método', margin + 110, 'left'],
-      ['Monto', W - margin - 2, 'right'],
-    ]);
-    shiftData.invoices.forEach((inv, i) => {
-      tableRow([
-        [inv.number, margin + 2, 'left'],
-        [inv.guest || '—', margin + 45, 'left'],
-        [inv.method, margin + 110, 'left'],
-        [fmt(inv.amount), W - margin - 2, 'right', [96, 165, 250]],
-      ], i % 2 === 0 ? [18, 18, 28] : null);
-    });
-    pdf.setFillColor(20, 25, 50);
-    pdf.rect(margin, y, W - margin * 2, 8, 'F');
-    pdf.setTextColor(96, 165, 250); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
-    pdf.text('TOTAL FACTURAS', margin + 4, y + 5.5);
-    pdf.text(fmt(totalFacturas), W - margin - 2, y + 5.5, { align: 'right' });
-    y += 12;
-    divider();
-  }
-
-  if (shiftData.expenses.length > 0) {
-    sectionTitle('GASTOS — CAJA MENOR', [192, 132, 252]);
-    tableHeader([
-      ['Concepto', margin + 2, 'left'],
-      ['Categoría', margin + 80, 'left'],
-      ['Monto', W - margin - 2, 'right'],
-    ]);
-    shiftData.expenses.forEach((exp, i) => {
-      tableRow([
-        [exp.concept, margin + 2, 'left'],
-        [exp.category, margin + 80, 'left'],
-        [fmt(exp.amount), W - margin - 2, 'right', [241, 113, 113]],
-      ], i % 2 === 0 ? [18, 18, 28] : null);
-    });
-    pdf.setFillColor(26, 20, 40);
-    pdf.rect(margin, y, W - margin * 2, 8, 'F');
-    pdf.setTextColor(192, 132, 252); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
-    pdf.text('TOTAL GASTOS', margin + 4, y + 5.5);
-    pdf.text(fmt(totalGastos), W - margin - 2, y + 5.5, { align: 'right' });
-    y += 12;
-    divider();
-  }
-
-  if (shiftData.checkins.length > 0) {
-    sectionTitle('MOVIMIENTOS DE HABITACIONES', [160, 120, 240]);
-    tableHeader([
-      ['Hab.', margin + 2, 'left'],
-      ['Huésped', margin + 20, 'left'],
-      ['Tipo', margin + 90, 'left'],
-      ['Hora', margin + 120, 'left'],
-    ]);
-    shiftData.checkins.forEach((ci, i) => {
-      tableRow([
-        [ci.room, margin + 2, 'left'],
-        [ci.guest, margin + 20, 'left'],
-        [ci.type === 'in' ? 'Check-in' : 'Check-out', margin + 90, 'left',
-        ci.type === 'in' ? [74, 222, 128] : [248, 113, 113]],
-        [ci.time, margin + 120, 'left'],
-      ], i % 2 === 0 ? [18, 18, 28] : null);
-    });
-    y += 4;
-    divider();
-  }
-
-  if (shiftData.notes?.trim()) {
-    sectionTitle('NOTAS PARA EL PRÓXIMO TURNO', [251, 191, 36]);
-    pdf.setFillColor(30, 28, 20);
-    pdf.roundedRect(margin, y, W - margin * 2, 20, 3, 3, 'F');
-    pdf.setTextColor(200, 180, 120);
-    pdf.setFont('helvetica', 'italic');
-    pdf.setFontSize(8.5);
-    const lines = pdf.splitTextToSize(shiftData.notes, W - margin * 2 - 8);
-    lines.slice(0, 3).forEach((line, i) => pdf.text(line, margin + 4, y + 7 + i * 5));
-    y += 26;
-    divider();
-  }
-
-  if (y > 230) { pdf.addPage(); y = 20; }
-
-  pdf.setFillColor(15, 15, 22);
-  pdf.rect(0, y, W, pdf.internal.pageSize.height - y, 'F');
-  y += 6;
-
-  pdf.setTextColor(80, 80, 120);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
-  pdf.text('FIRMAS DE CONFORMIDAD', margin, y);
-  y += 8;
-
-  const sigW = (W - margin * 2 - 12) / 2;
-  const sigH = 26;
-
-  pdf.setFillColor(18, 18, 28);
-  pdf.roundedRect(margin, y, sigW, sigH, 3, 3, 'F');
-  pdf.setDrawColor(40, 40, 60);
-  pdf.roundedRect(margin, y, sigW, sigH, 3, 3, 'S');
-  pdf.setTextColor(80, 80, 110);
-  pdf.setFontSize(7.5);
-  pdf.text('RECEPCIONISTA SALIENTE', margin + 4, y + 6);
-  pdf.setTextColor(170, 170, 200);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9);
-  pdf.text(receptionistName || '___________________', margin + 4, y + 13);
-  pdf.setDrawColor(50, 50, 80);
-  pdf.line(margin + 4, y + sigH - 5, margin + sigW - 4, y + sigH - 5);
-  pdf.setTextColor(60, 60, 90); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7);
-  pdf.text('Firma', margin + 4, y + sigH - 1);
-
-  pdf.setFillColor(18, 18, 28);
-  pdf.roundedRect(margin + sigW + 12, y, sigW, sigH, 3, 3, 'F');
-  pdf.setDrawColor(40, 40, 60);
-  pdf.roundedRect(margin + sigW + 12, y, sigW, sigH, 3, 3, 'S');
-  pdf.setTextColor(80, 80, 110);
-  pdf.setFontSize(7.5);
-  pdf.text('RECEPCIONISTA ENTRANTE', margin + sigW + 16, y + 6);
-  pdf.setTextColor(170, 170, 200);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9);
-  pdf.text('___________________', margin + sigW + 16, y + 13);
-  pdf.setDrawColor(50, 50, 80);
-  pdf.line(margin + sigW + 16, y + sigH - 5, margin + sigW * 2 + 8, y + sigH - 5);
-  pdf.setTextColor(60, 60, 90); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7);
-  pdf.text('Firma', margin + sigW + 16, y + sigH - 1);
-
-  y += sigH + 8;
-
-  pdf.setTextColor(50, 50, 80);
-  pdf.setFontSize(7);
-  pdf.text(`Generado el ${dateLabel} a las ${timeLabel}  •  Hotel Cytrico — Sistema de Recepción`, W / 2, y + 4, { align: 'center' });
-
-  const filename = `turno_${shiftKey}_${now.toISOString().slice(0, 10)}.pdf`;
-  pdf.save(filename);
-};*/
+const loadFromStorage = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+};
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 export default function TurnRegister() {
-  const [activeShift, setActiveShift] = useState('morning');
-  const [receptionistName, setReceptionistName] = useState('');
+  const [activeShift, setActiveShift] = useState(() => loadFromStorage()?.activeShift || 'morning');
+  const [receptionistName, setReceptionistName] = useState(() => loadFromStorage()?.receptionistName || '');
   const [receptionists, setReceptionists] = useState([]);
-  const [data, setData] = useState({ morning: makeShift(), afternoon: makeShift(), night: makeShift() });
+  const [data, setData] = useState(() => loadFromStorage()?.data || { morning: makeShift(), afternoon: makeShift(), night: makeShift() });
   const [cajaMenorSaldo, setCajaMenorSaldo] = useState(null);
   const [cajaMenorInput, setCajaMenorInput] = useState('');
   const [cajaMenorLocked, setCajaMenorLocked] = useState(false);
@@ -392,6 +113,10 @@ export default function TurnRegister() {
     };
     init();
   }, []);
+
+  useEffect(() => {
+  saveToStorage({ activeShift, receptionistName, data });
+}, [activeShift, receptionistName, data]);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -459,7 +184,7 @@ export default function TurnRegister() {
   const totalGastos = sd.expenses.reduce((s, i) => s + i.amount, 0);
   const nextShiftKey = SHIFT_ORDER[(SHIFT_ORDER.indexOf(activeShift) + 1) % 3];
 
-  const handleCloseShift = async () => {
+ /* const handleCloseShift = async () => {
     if (saving) return;
     if (!receptionistName.trim()) { showToast('Ingresa tu nombre antes de entregar el turno', 'error'); return; }
     setSaving(true);
@@ -487,7 +212,43 @@ export default function TurnRegister() {
     } finally {
       setSaving(false);
     }
+    localStorage.removeItem(STORAGE_KEY);
+  };*/
+
+//testpfd-------------------------------------------------------------------------------
+  const handleTestPDF = async () => {
+
+  const mockData = {
+    income: [
+      { type: "alojamiento", typeLabel: "Alojamiento", concept: "Hab 201", method: "Efectivo", amount: 50000 },
+      { type: "lavanderia", typeLabel: "Lavandería", concept: "Ropa", method: "Tarjeta", amount: 8000 }
+    ],
+
+    expenses: [
+      { concept: "Compra jabón", category: "Limpieza", amount: 5000 }
+    ],
+
+    invoices: [
+      { amount: 40000 }
+    ],
+
+    checkins: [
+      { type: "in", room: 201, guest: "Juan Perez", time: "10:30" },
+      { type: "out", room: 105, guest: "Ana Gomez", time: "11:00" }
+    ],
+
+    notes: "Todo en orden en el turno."
   };
+
+  await generateShiftHandoverPDF(
+    mockData,
+    "morning",
+    "Sebastian",
+    20000
+  );
+};
+
+//testpfd-------------------------------------------------------------------------------
 
   const handleStartShift = async () => {
     setPasswordError('');
@@ -869,12 +630,19 @@ export default function TurnRegister() {
           <textarea className="tr-textarea"
             placeholder="Notas para el próximo turno: pendientes, incidencias, instrucciones especiales..."
             value={sd.notes} onChange={e => update('notes', e.target.value)} />
-          <button className="btn-close-shift" onClick={handleCloseShift} disabled={saving}>
+
+            <button className="btn-close-shift" onClick={handleTestPDF} disabled={saving}>
+            {saving
+              ? <><FaSpinner className="spinning" /> Guardando y generando PDF...</>
+              : <><FaFilePdf /> puerba pdf {SHIFTS[activeShift].label} y generar PDF</>
+            }
+          </button>
+          {/*<button className="btn-close-shift" onClick={handleCloseShift} disabled={saving}>
             {saving
               ? <><FaSpinner className="spinning" /> Guardando y generando PDF...</>
               : <><FaFilePdf /> Entregar Turno {SHIFTS[activeShift].label} y generar PDF</>
             }
-          </button>
+          </button>*/}
         </div>
       </div>
 

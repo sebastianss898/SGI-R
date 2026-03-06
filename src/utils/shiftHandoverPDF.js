@@ -15,7 +15,37 @@ export const generateShiftHandoverPDF = async (shiftData, shiftKey, receptionist
       document.head.appendChild(script);
     });
   }
+//--------------------------------------------------------------------
+//data previeb
+//----------------------------------------------------
 
+const testData = {
+  income: [
+    { type: "alojamiento", typeLabel: "Alojamiento", concept: "Habitación 201", method: "Efectivo", amount: 50000 },
+    { type: "lavanderia", typeLabel: "Lavandería", concept: "Servicio ropa", method: "Tarjeta", amount: 8000 },
+    { type: "otro", typeLabel: "Otro", concept: "Bebidas", method: "Efectivo", amount: 6000 }
+  ],
+
+  expenses: [
+    { concept: "Compra jabón", category: "Limpieza", amount: 5000 },
+    { concept: "Compra papel", category: "Papelería", amount: 3000 }
+  ],
+
+  invoices: [
+    { amount: 45000 }
+  ],
+
+  checkins: [
+    { type: "in", room: 201, guest: "Juan Pérez", time: "10:30" },
+    { type: "out", room: 105, guest: "Ana Gómez", time: "11:10" },
+    { type: "in", room: 304, guest: "Carlos Ruiz", time: "12:15" }
+  ],
+
+  notes: "Cliente de la habitación 201 solicitó desayuno a las 7am."
+};
+//--------------------------------------------------------------------
+//data previeb
+//----------------------------------------------------
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -118,9 +148,9 @@ export const generateShiftHandoverPDF = async (shiftData, shiftKey, receptionist
   // Tabla compacta
   const rows = [
     ['Caja Principal - Ingresos', fmt(totalIngresos), true],
-    ['  └ Alojamiento', fmt(totalAloj), false],
-    ['  └ Lavandería', fmt(totalLav), false],
-    ['  └ Otros', fmt(totalOtros), false],
+    ['  - Alojamiento', fmt(totalAloj), false],
+    ['  - Lavandería', fmt(totalLav), false],
+    ['  - Otros', fmt(totalOtros), false],
     ['Facturas Emitidas', fmt(totalFacturas), false],
     ['Caja Menor - Gastos', fmt(totalGastos), false],
     ['Caja Menor - Saldo Final', fmt(cajaMenorSaldo ?? 0), true],
@@ -136,7 +166,7 @@ export const generateShiftHandoverPDF = async (shiftData, shiftKey, receptionist
   
   y += 2;
   pdf.line(margin, y, W - margin, y);
-  y += 6;
+  y += 10;
   
   // Movimientos de habitaciones
   if (shiftData.checkins.length > 0) {
@@ -144,6 +174,7 @@ export const generateShiftHandoverPDF = async (shiftData, shiftKey, receptionist
     pdf.setFontSize(9);
     pdf.text('MOVIMIENTOS DE HABITACIONES', margin, y);
     y += 5;
+    
     
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(7);
@@ -165,7 +196,7 @@ export const generateShiftHandoverPDF = async (shiftData, shiftKey, receptionist
   // SECCIÓN MEDIA - Detalle de transacciones (panel central visible)
   // ═══════════════════════════════════════════════════════════════
   
-  y = 105; // Inicio de sección media
+  y = 125; // Inicio de sección media
   
   // Línea de doblez
   pdf.setDrawColor(200, 200, 200);
@@ -214,7 +245,7 @@ export const generateShiftHandoverPDF = async (shiftData, shiftKey, receptionist
     pdf.rect(margin, y, W - margin * 2, 5);
     pdf.text('TOTAL', margin + 2, y + 3.5);
     pdf.text(fmt(totalIngresos), W - margin - 2, y + 3.5, { align: 'right' });
-    y += 7;
+    y += 8;
   }
   
   // Gastos detallados
@@ -325,5 +356,6 @@ export const generateShiftHandoverPDF = async (shiftData, shiftKey, receptionist
 
   // Guardar PDF
   const filename = `entrega_turno_${shiftKey}_${now.toISOString().slice(0, 10)}.pdf`;
-  pdf.save(filename);
+  //pdf.save(filename);
+  window.open(pdf.output("bloburl"));
 };

@@ -10,6 +10,7 @@ export const REPORT_TYPES = {
   SHIFTS: 'shifts',
   FINANCES: 'finances',
   OCCUPANCY: 'occupancy',
+  INVENTARIO: 'inventario',
 };
 
 export const REPORT_CATEGORIES = {
@@ -29,6 +30,7 @@ export const REPORT_LABELS = {
   [REPORT_TYPES.FINANCES]: 'Finanzas y Caja',
   [REPORT_TYPES.OCCUPANCY]: 'Ocupación Hotelera',
   [REPORT_TYPES.TEMPERATURE]: 'Control de Temperatura',
+  [REPORT_TYPES.INVENTARIO]: 'Inventario de Productos Químicos',
 };
 
 export const REPORT_DESCRIPTIONS = {
@@ -41,6 +43,7 @@ export const REPORT_DESCRIPTIONS = {
   [REPORT_TYPES.FINANCES]: 'Ingresos, gastos y cuadre de caja',
   [REPORT_TYPES.OCCUPANCY]: 'Tasa de ocupación y estadísticas de habitaciones',
   [REPORT_TYPES.TEMPERATURE]: 'Registro de temperaturas en áreas críticas',
+  [REPORT_TYPES.INVENTARIO]: 'Control de stock y uso de productos químicos',
 };
 
 export const REPORT_ICONS = {
@@ -53,6 +56,8 @@ export const REPORT_ICONS = {
   [REPORT_TYPES.FINANCES]: '💰',
   [REPORT_TYPES.OCCUPANCY]: '📊',
   [REPORT_TYPES.TEMPERATURE]: '🌡️',
+  [REPORT_TYPES.INVENTARIO]: '💧',
+  [REPORT_TYPES.INVENTARIO]: '📦',
 };
 
 export const REPORT_COLORS = {
@@ -65,6 +70,7 @@ export const REPORT_COLORS = {
   [REPORT_TYPES.FINANCES]: '#10b981',
   [REPORT_TYPES.OCCUPANCY]: '#ec4899',
   [REPORT_TYPES.TEMPERATURE]: '#ef4444',
+  [REPORT_TYPES.INVENTARIO]: '#14b8a6',
 };
 
 export const REPORT_CATEGORY_MAP = {
@@ -77,6 +83,7 @@ export const REPORT_CATEGORY_MAP = {
   [REPORT_TYPES.FINANCES]: REPORT_CATEGORIES.ADMINISTRATION,
   [REPORT_TYPES.OCCUPANCY]: REPORT_CATEGORIES.ADMINISTRATION,
   [REPORT_TYPES.TEMPERATURE]: REPORT_CATEGORIES.QUALITY,
+  [REPORT_TYPES.INVENTARIO]: REPORT_CATEGORIES.MAINTENANCE,
 };
 
 export const REPORT_FREQUENCY = {

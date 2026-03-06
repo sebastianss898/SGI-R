@@ -15,6 +15,7 @@ import AlertsManagement from './components/AlertsManagement';
 import AlertsSeeder from './components/AlertsSeeder';
 import ReportsManagement from './components/Reportsmanagement';
 import ShiftsScheduleManagement from './components/Shiftsschedulemanagement';
+import Maintenance from './components/Maintenance';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -128,6 +129,15 @@ function App() {
       userRole={currentUser.role}
     >
       <ShiftsScheduleManagement currentUser={currentUser} />
+    </ProtectedRoute>
+  );
+   case 'mantenimiento':
+  return (
+    <ProtectedRoute 
+      requiredPermission={PERMISSIONS.VIEW_MAINTENANCE}
+      userRole={currentUser.role}
+    >
+      <Maintenance currentUser={currentUser} />
     </ProtectedRoute>
   );
       default:
