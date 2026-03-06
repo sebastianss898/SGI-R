@@ -2,8 +2,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
-// 🔴 Reemplaza estos valores con los de tu proyecto Firebase
-// (los encuentras en Firebase Console → Project Settings → Your apps)
 const firebaseConfig = {
   apiKey: "AIzaSyDSODyeLd3Y7DXmY1djmvLm4QL7vcbuwlQ",
   authDomain: "sgi-01-8d1e2.firebaseapp.com",
