@@ -68,14 +68,14 @@ function App() {
         );
 
       case 'turnos':
-        return (
-          <ProtectedRoute 
-            requiredPermission={PERMISSIONS.VIEW_SHIFTS}
-            userRole={currentUser.role}
-          >
-            <TurnRegister />
-          </ProtectedRoute>
-        );
+  return (
+    <ProtectedRoute 
+      requiredPermission={PERMISSIONS.VIEW_SHIFTS}
+      userRole={currentUser.role}
+    >
+      <TurnRegister currentUser={currentUser} onLogout={handleLogout} />
+    </ProtectedRoute>
+  );
 
       case 'historial':
         return (

@@ -155,7 +155,7 @@ export const ROLE_LABELS = {
   [ROLES.ADMIN]: 'Administrador',
   [ROLES.MANAGER]: 'Gerente',
   [ROLES.RECEPTIONIST]: 'Recepcionista',
-  [ROLES.HOUSEKEEPER]: 'Gobernanta',
+  [ROLES.HOUSEKEEPER]: 'Limpieza',
   [ROLES.MAINTENANCE]: 'Mantenimiento',
 };
 
