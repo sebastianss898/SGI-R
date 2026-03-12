@@ -18,6 +18,17 @@ export const generateShiftHandoverPDF = async (shiftData, shiftKey, receptionist
 //--------------------------------------------------------------------
 //data previeb
 //----------------------------------------------------
+shiftData = {
+  income: shiftData?.cajaMayor?.income || shiftData?.income || [],
+  expenses: shiftData?.cajaMenor?.expenses || shiftData?.expenses || [],
+  invoices: shiftData?.invoices || [],
+  checkins: shiftData?.checkins || [],
+  notes: shiftData?.notes || ""
+};
+
+const efectivo = shiftData.income
+  .filter(i => i.method === "Efectivo")
+  .reduce((s,i)=> s+i.amount,0);
 
 const testData = {
   income: [
@@ -60,7 +71,7 @@ const testData = {
     night: { label: 'Noche', hours: '22:00–06:00', symbol: '☽' },
   };
 
-  const shift = SHIFTS[shiftKey];
+  const shift = SHIFTS[shiftKey] || SHIFTS.morning;
   const now = new Date();
   const dateLabel = now.toLocaleDateString('es-CL', { 
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
@@ -133,12 +144,24 @@ const testData = {
   // Resumen financiero compacto
   // ───────────────────────────────────────────────────────────────
   
-  const totalIngresos = shiftData.income.reduce((s, i) => s + i.amount, 0);
-  const totalAloj = shiftData.income.filter(i => i.type === 'alojamiento').reduce((s, i) => s + i.amount, 0);
-  const totalLav = shiftData.income.filter(i => i.type === 'lavanderia').reduce((s, i) => s + i.amount, 0);
-  const totalOtros = shiftData.income.filter(i => i.type === 'otro').reduce((s, i) => s + i.amount, 0);
-  const totalGastos = shiftData.expenses.reduce((s, i) => s + i.amount, 0);
-  const totalFacturas = shiftData.invoices.reduce((s, i) => s + i.amount, 0);
+  const totalIngresos = Array.isArray(shiftData.income)
+  ? shiftData.income.reduce((s, i) => s + (i.amount || 0), 0)
+  : 0;
+  const totalAloj = Array.isArray(shiftData.income)
+  ? shiftData.income.filter(i => i.type === 'alojamiento').reduce((s, i) => s + (i.amount || 0), 0)
+  : 0;
+  const totalLav = Array.isArray(shiftData.income)
+  ? shiftData.income.filter(i => i.type === 'lavanderia').reduce((s, i) => s + (i.amount || 0), 0)
+  : 0;
+  const totalOtros = Array.isArray(shiftData.income)
+  ? shiftData.income.filter(i => i.type === 'otro').reduce((s, i) => s + (i.amount || 0), 0)
+  : 0;
+  const totalGastos = Array.isArray(shiftData.expenses)
+  ? shiftData.expenses.reduce((s, i) => s + (i.amount || 0), 0)
+  : 0;
+  const totalFacturas = Array.isArray(shiftData.invoices)
+  ? shiftData.invoices.reduce((s, i) => s + (i.amount || 0), 0)
+  : 0;
   
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
@@ -270,7 +293,7 @@ const testData = {
         pdf.setFillColor(245, 245, 245);
         pdf.rect(margin, y, W - margin * 2, 4, 'F');
       }
-      pdf.text(exp.concept.slice(0, 50), margin + 2, y + 3);
+      pdf.text((exp.concept || '').slice(0, 50), margin + 2, y + 3);
       pdf.text(exp.category, margin + 90, y + 3);
       pdf.text(fmt(exp.amount), W - margin - 2, y + 3, { align: 'right' });
       y += 4;

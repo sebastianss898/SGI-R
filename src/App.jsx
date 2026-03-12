@@ -17,6 +17,8 @@ import ReportsManagement from './components/Reportsmanagement';
 import ShiftsScheduleManagement from './components/Shiftsschedulemanagement';
 import Maintenance from './components/Maintenance';
 
+
+
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState('dashboard');
@@ -131,7 +133,7 @@ function App() {
       <ShiftsScheduleManagement currentUser={currentUser} />
     </ProtectedRoute>
   );
-   case 'mantenimiento':
+  case 'mantenimiento':
   return (
     <ProtectedRoute 
       requiredPermission={PERMISSIONS.VIEW_MAINTENANCE}

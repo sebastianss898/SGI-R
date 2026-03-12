@@ -3,6 +3,9 @@ import { db } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { FaUser, FaLock, FaEye, FaEyeSlash, FaHotel,FaChartBar,FaChartLine,FaCheck   } from 'react-icons/fa';
 import '../styles/login.css';
+import logo from "../assets/logo.png";
+
+
 
 const Login = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
@@ -72,9 +75,8 @@ const Login = ({ onLoginSuccess }) => {
         <div className="login-left">
           <div className="login-brand">
             <div className="brand-icon">
-              <FaChartBar  />
+            <img src={logo} alt="SGI Logo" width="120"/>
             </div>
-       
             <h1>SGI</h1>
             <p>Sistema de Gestión Integral</p>
           </div>
