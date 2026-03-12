@@ -129,7 +129,7 @@ const UserManagement = () => {
 
     // Si el admin no tiene uid en Firestore, sincronizarlo primero
     if (!currentUser?.uid) await ensureUidInFirestore();
-
+    const createUser = httpsCallable(functions, "createUser");
     setSaving(true);
     try {
       await createUserFn({
