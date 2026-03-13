@@ -119,7 +119,7 @@ const Sidebar = ({ isOpen, currentView, setCurrentView, currentUser }) => {
         </div>
       )}
 
-      {/* Notificaciones rápidas */}
+      {/* Notificaciones rápidas 
       {isOpen && hasPermission(currentUser.role, PERMISSIONS.VIEW_NOTES) && (
         <div className="sidebar-notifications">
           <div className="notification-item">
@@ -127,7 +127,7 @@ const Sidebar = ({ isOpen, currentView, setCurrentView, currentUser }) => {
             <span>3 notificaciones nuevas</span>
           </div>
         </div>
-      )}
+      )}*/}
 
       {/* Navegación */}
       <nav className="sidebar-nav">

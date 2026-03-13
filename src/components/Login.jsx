@@ -9,62 +9,65 @@ import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import '../styles/login.css';
 import logo from '../assets/logo.png';
 
-// Máximo de intentos antes de bloquear temporalmente
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS    = 5;
 const LOCKOUT_MINUTES = 15;
 
+// ─── Fuera del componente — disponibles desde el primer render ───────────────
+const getAttemptData = () => {
+  try {
+    return JSON.parse(localStorage.getItem('loginAttempts') || '{"count":0,"since":0}');
+  } catch {
+    return { count: 0, since: 0 };
+  }
+};
+
+const isLockedOut = () => {
+  const data = getAttemptData();
+  if (data.count < MAX_ATTEMPTS) return false;
+  const minutesPassed = (Date.now() - data.since) / 60000;
+  if (minutesPassed >= LOCKOUT_MINUTES) {
+    localStorage.removeItem('loginAttempts');
+    return false;
+  }
+  return Math.ceil(LOCKOUT_MINUTES - minutesPassed);
+};
+
 const Login = ({ onLoginSuccess }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]               = useState('');
+  const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  // Vista: 'login' | 'reset' | 'reset-sent'
-  const [view, setView] = useState('login');
-  const [resetEmail, setResetEmail] = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState('');
+  const [isBlocked, setIsBlocked]       = useState(() => !!isLockedOut()); // ✅ ya no hay problema de orden
+  const [view, setView]                 = useState('login');
+  const [resetEmail, setResetEmail]     = useState('');
   const [resetLoading, setResetLoading] = useState(false);
-  const [resetError, setResetError] = useState('');
+  const [resetError, setResetError]     = useState('');
 
-  // ─── Control de intentos fallidos (localStorage) ──────────────────────────
-  const getAttemptData = () => {
-    try {
-      return JSON.parse(localStorage.getItem('loginAttempts') || '{"count":0,"since":0}');
-    } catch {
-      return { count: 0, since: 0 };
-    }
-  };
-
-  const isLockedOut = () => {
-    const data = getAttemptData();
-    if (data.count < MAX_ATTEMPTS) return false;
-    const minutesPassed = (Date.now() - data.since) / 60000;
-    if (minutesPassed >= LOCKOUT_MINUTES) {
-      localStorage.removeItem('loginAttempts');
-      return false;
-    }
-    return Math.ceil(LOCKOUT_MINUTES - minutesPassed);
-  };
-
+  // ─── Control de intentos fallidos ─────────────────────────────────────────
   const registerFailedAttempt = () => {
     const data = getAttemptData();
-    const newData = {
-      count: data.count + 1,
+    const newCount = data.count + 1;
+    localStorage.setItem('loginAttempts', JSON.stringify({
+      count: newCount,
       since: data.count === 0 ? Date.now() : data.since
-    };
-    localStorage.setItem('loginAttempts', JSON.stringify(newData));
+    }));
+    if (newCount >= MAX_ATTEMPTS) setIsBlocked(true);
   };
 
-  const clearAttempts = () => localStorage.removeItem('loginAttempts');
+  const clearAttempts = () => {
+    localStorage.removeItem('loginAttempts');
+    setIsBlocked(false);
+  };
 
   // ─── Login ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    // Verificar bloqueo
     const lockout = isLockedOut();
     if (lockout) {
+      setIsBlocked(true);
       setError(`Demasiados intentos fallidos. Espera ${lockout} minuto${lockout !== 1 ? 's' : ''} o restablece tu contraseña.`);
       return;
     }
@@ -73,20 +76,21 @@ const Login = ({ onLoginSuccess }) => {
 
     try {
       // 1. Autenticar con Firebase Auth
-      const credential = await signInWithEmailAndPassword(auth, email.toLowerCase(), password);
+      const credential = await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
 
-      // 2. Obtener datos del perfil desde Firestore
+      // 2. Leer perfil desde colección 'users' (igual que antes)
       const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('email', '==', email.toLowerCase()));
+      const q = query(usersRef, where('email', '==', email.toLowerCase().trim()));
       const snap = await getDocs(q);
 
       if (snap.empty) {
-        setError('Usuario no encontrado en el sistema.');
+        setError('Usuario no encontrado en el sistema. Contacta al administrador.');
+        await auth.signOut();
         setLoading(false);
         return;
       }
 
-      const userDoc = snap.docs[0];
+      const userDoc  = snap.docs[0];
       const userData = userDoc.data();
 
       // 3. Verificar que esté activo
@@ -101,10 +105,10 @@ const Login = ({ onLoginSuccess }) => {
       clearAttempts();
 
       const user = {
-        id: userDoc.id,
+        id:  userDoc.id,
         uid: credential.user.uid,
         ...userData,
-        password: undefined // nunca pasar la contraseña al estado
+        password: undefined,
       };
 
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -114,7 +118,6 @@ const Login = ({ onLoginSuccess }) => {
       registerFailedAttempt();
       const remaining = MAX_ATTEMPTS - getAttemptData().count;
 
-      // Mensajes amigables según el código de error de Firebase Auth
       switch (err.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
@@ -122,7 +125,7 @@ const Login = ({ onLoginSuccess }) => {
           setError(
             remaining > 0
               ? `Credenciales incorrectas. Te quedan ${remaining} intento${remaining !== 1 ? 's' : ''}.`
-              : `Cuenta bloqueada por ${LOCKOUT_MINUTES} minutos. Puedes restablecer tu contraseña.`
+              : `Cuenta bloqueada por ${LOCKOUT_MINUTES} minutos. Podés restablecer tu contraseña.`
           );
           break;
         case 'auth/too-many-requests':
@@ -148,18 +151,15 @@ const Login = ({ onLoginSuccess }) => {
     e.preventDefault();
     setResetError('');
     setResetLoading(true);
-
     try {
       await sendPasswordResetEmail(auth, resetEmail.toLowerCase(), {
-        // URL a la que redirige después de resetear (ajusta a tu dominio)
         url: window.location.origin,
       });
       setView('reset-sent');
     } catch (err) {
       switch (err.code) {
         case 'auth/user-not-found':
-          // Por seguridad, no revelar si el email existe o no
-          setView('reset-sent');
+          setView('reset-sent'); // no revelar si el email existe
           break;
         case 'auth/invalid-email':
           setResetError('El formato del correo no es válido.');
@@ -176,7 +176,7 @@ const Login = ({ onLoginSuccess }) => {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER — Vista Reset enviado
+  // RENDER — Reset enviado
   // ═══════════════════════════════════════════════════════════════════════════
   if (view === 'reset-sent') {
     return (
@@ -184,14 +184,11 @@ const Login = ({ onLoginSuccess }) => {
         <div className="login-container">
           <div className="login-left">
             <div className="login-brand">
-              <div className="brand-icon">
-                <img src={logo} alt="SGI Logo" width="120" />
-              </div>
+              <div className="brand-icon"><img src={logo} alt="SGI Logo" width="120" /></div>
               <h1>SGI</h1>
               <p>Sistema de Gestión Integral</p>
             </div>
           </div>
-
           <div className="login-right">
             <div className="login-form-wrapper">
               <div className="login-header">
@@ -205,11 +202,7 @@ const Login = ({ onLoginSuccess }) => {
                   Revisa también la carpeta de spam.
                 </p>
               </div>
-
-              <button
-                className="login-btn"
-                onClick={() => { setView('login'); setResetEmail(''); }}
-              >
+              <button className="login-btn" onClick={() => { setView('login'); setResetEmail(''); }}>
                 Volver al inicio de sesión
               </button>
             </div>
@@ -220,7 +213,7 @@ const Login = ({ onLoginSuccess }) => {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER — Vista Reset
+  // RENDER — Reset contraseña
   // ═══════════════════════════════════════════════════════════════════════════
   if (view === 'reset') {
     return (
@@ -228,29 +221,21 @@ const Login = ({ onLoginSuccess }) => {
         <div className="login-container">
           <div className="login-left">
             <div className="login-brand">
-              <div className="brand-icon">
-                <img src={logo} alt="SGI Logo" width="120" />
-              </div>
+              <div className="brand-icon"><img src={logo} alt="SGI Logo" width="120" /></div>
               <h1>SGI</h1>
               <p>Sistema de Gestión Integral</p>
             </div>
           </div>
-
           <div className="login-right">
             <div className="login-form-wrapper">
               <div className="login-header">
                 <h2>Restablecer contraseña</h2>
                 <p>Ingresa tu correo y te enviaremos un enlace para crear una nueva contraseña.</p>
               </div>
-
               <form onSubmit={handlePasswordReset} className="login-form">
                 {resetError && (
-                  <div className="login-error">
-                    <span>⚠️</span>
-                    <span>{resetError}</span>
-                  </div>
+                  <div className="login-error"><span>⚠️</span><span>{resetError}</span></div>
                 )}
-
                 <div className="form-group">
                   <label htmlFor="reset-email">Correo Electrónico</label>
                   <div className="input-wrapper">
@@ -266,16 +251,10 @@ const Login = ({ onLoginSuccess }) => {
                     />
                   </div>
                 </div>
-
                 <button type="submit" className="login-btn" disabled={resetLoading}>
-                  {resetLoading ? (
-                    <><span className="spinner"></span> Enviando...</>
-                  ) : (
-                    'Enviar enlace de restablecimiento'
-                  )}
+                  {resetLoading ? <><span className="spinner"></span> Enviando...</> : 'Enviar enlace de restablecimiento'}
                 </button>
               </form>
-
               <div className="login-footer">
                 <button
                   style={{ background: 'none', border: 'none', color: '#5b5bff', cursor: 'pointer', fontSize: '0.9rem' }}
@@ -292,41 +271,25 @@ const Login = ({ onLoginSuccess }) => {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER — Vista Login principal
+  // RENDER — Login principal
   // ═══════════════════════════════════════════════════════════════════════════
   return (
     <div className="login-page">
       <div className="login-container">
-        {/* Left Side */}
         <div className="login-left">
           <div className="login-brand">
-            <div className="brand-icon">
-              <img src={logo} alt="SGI Logo" width="120" />
-            </div>
+            <div className="brand-icon"><img src={logo} alt="SGI Logo" width="120" /></div>
             <h1>SGI</h1>
             <p>Sistema de Gestión Integral</p>
           </div>
           <div className="login-features">
-            <div className="feature-item">
-              <span className="feature-icon">✓</span>
-              <span>Gestión de Turnos</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">✓</span>
-              <span>Control de Check-in/out</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">✓</span>
-              <span>Métricas en Tiempo Real</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">✓</span>
-              <span>Reportes Detallados</span>
-            </div>
+            <div className="feature-item"><span className="feature-icon">✓</span><span>Gestión de Turnos</span></div>
+            <div className="feature-item"><span className="feature-icon">✓</span><span>Control de Check-in/out</span></div>
+            <div className="feature-item"><span className="feature-icon">✓</span><span>Métricas en Tiempo Real</span></div>
+            <div className="feature-item"><span className="feature-icon">✓</span><span>Reportes Detallados</span></div>
           </div>
         </div>
 
-        {/* Right Side */}
         <div className="login-right">
           <div className="login-form-wrapper">
             <div className="login-header">
@@ -336,10 +299,7 @@ const Login = ({ onLoginSuccess }) => {
 
             <form onSubmit={handleSubmit} className="login-form">
               {error && (
-                <div className="login-error">
-                  <span>⚠️</span>
-                  <span>{error}</span>
-                </div>
+                <div className="login-error"><span>⚠️</span><span>{error}</span></div>
               )}
 
               <div className="form-group">
@@ -381,7 +341,6 @@ const Login = ({ onLoginSuccess }) => {
                 </div>
               </div>
 
-              {/* Enlace de recuperación */}
               <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 16 }}>
                 <button
                   type="button"
@@ -392,12 +351,8 @@ const Login = ({ onLoginSuccess }) => {
                 </button>
               </div>
 
-              <button type="submit" className="login-btn" disabled={loading || !!isLockedOut()}>
-                {loading ? (
-                  <><span className="spinner"></span> Iniciando sesión...</>
-                ) : (
-                  'Iniciar Sesión'
-                )}
+              <button type="submit" className="login-btn" disabled={loading || isBlocked}>
+                {loading ? <><span className="spinner"></span> Iniciando sesión...</> : 'Iniciar Sesión'}
               </button>
             </form>
 

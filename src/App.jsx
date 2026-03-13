@@ -1,45 +1,40 @@
-// App.jsx - Con Login Independiente y Gestión de Sesión
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import TurnRegister from './components/TurnRegister';
 import ShiftHistory from './components/Shifthistory';
-import UserManagement from '../src/pages/UserManagementPage';
 import MetricsDashboard from './components/Metricsdashboard';
 import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import { PERMISSIONS } from './utils/roles';
-import './styles/globalStyles.css';
 import AlertsManagement from './components/AlertsManagement';
-import AlertsSeeder from './components/AlertsSeeder';
 import ReportsManagement from './components/Reportsmanagement';
 import ShiftsScheduleManagement from './components/Shiftsschedulemanagement';
 import Maintenance from './components/Maintenance';
-
-
+import EmployeeManager from './components/EmployeeManager';
+import './styles/globalStyles.css';
 
 function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentView, setCurrentView] = useState('dashboard');
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen]   = useState(true);
+  const [currentView, setCurrentView]   = useState('dashboard');
+  const [currentUser, setCurrentUser]   = useState(null);
+  const [isLoading, setIsLoading]       = useState(true);
 
-  // Verificar sesión al cargar
+  // ── Verificar sesión guardada al cargar ──────────────────────────────────
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
+    const saved = localStorage.getItem('currentUser');
+    if (saved) {
       try {
-        const user = JSON.parse(savedUser);
-        setCurrentUser(user);
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
+        setCurrentUser(JSON.parse(saved));
+      } catch {
         localStorage.removeItem('currentUser');
       }
     }
     setIsLoading(false);
   }, []);
 
+  // ── Auth handlers ────────────────────────────────────────────────────────
   const handleLogin = (user) => {
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
@@ -51,135 +46,108 @@ function App() {
     setCurrentView('dashboard');
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
+  // ── Vistas protegidas ────────────────────────────────────────────────────
   const renderView = () => {
     switch (currentView) {
+
       case 'dashboard':
         return (
-          <ProtectedRoute 
-            requiredPermission={PERMISSIONS.VIEW_DASHBOARD}
-            userRole={currentUser.role}
-          >
+          <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_DASHBOARD} userRole={currentUser.role}>
             <Dashboard />
           </ProtectedRoute>
         );
 
       case 'turnos':
-  return (
-    <ProtectedRoute 
-      requiredPermission={PERMISSIONS.VIEW_SHIFTS}
-      userRole={currentUser.role}
-    >
-      <TurnRegister currentUser={currentUser} onLogout={handleLogout} />
-    </ProtectedRoute>
-  );
+        return (
+          <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_SHIFTS} userRole={currentUser.role}>
+            <TurnRegister currentUser={currentUser} onLogout={handleLogout} />
+          </ProtectedRoute>
+        );
 
       case 'historial':
         return (
-          <ProtectedRoute 
-            requiredPermission={PERMISSIONS.VIEW_SHIFT_HISTORY}
-            userRole={currentUser.role}
-          >
+          <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_SHIFT_HISTORY} userRole={currentUser.role}>
             <ShiftHistory />
           </ProtectedRoute>
         );
 
       case 'metricas':
         return (
-          <ProtectedRoute 
-            requiredPermission={PERMISSIONS.VIEW_METRICS}
-            userRole={currentUser.role}
-          >
+          <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_METRICS} userRole={currentUser.role}>
             <MetricsDashboard />
           </ProtectedRoute>
         );
 
       case 'usuarios':
         return (
-          <ProtectedRoute 
-            requiredPermission={PERMISSIONS.CREATE_USER}
-            userRole={currentUser.role}
-          >
-            <UserManagement />
+          <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_USERS} userRole={currentUser.role}>
+            {/* ✅ currentUser pasado — necesario para que EmployeeManager detecte el rol admin */}
+            <EmployeeManager currentUser={currentUser} />
           </ProtectedRoute>
         );
+
       case 'alertas':
         return (
-          <ProtectedRoute 
-            requiredPermission={PERMISSIONS.VIEW_ALERTS}
-            userRole={currentUser.role}
-          >
-      <AlertsManagement currentUser={currentUser} />
-    </ProtectedRoute>
-  );
-  case 'reportes':
-  return (
-    <ProtectedRoute 
-      requiredPermission={PERMISSIONS.VIEW_REPORTS_PAGE}
-      userRole={currentUser.role}
-    >
-      <ReportsManagement currentUser={currentUser} />
-    </ProtectedRoute>
-  );
-  case 'horarios':
-  return (
-    <ProtectedRoute 
-      requiredPermission={PERMISSIONS.VIEW_SHIFTS_SCHEDULE}
-      userRole={currentUser.role}
-    >
-      <ShiftsScheduleManagement currentUser={currentUser} />
-    </ProtectedRoute>
-  );
-  case 'mantenimiento':
-  return (
-    <ProtectedRoute 
-      requiredPermission={PERMISSIONS.VIEW_MAINTENANCE}
-      userRole={currentUser.role}
-    >
-      <Maintenance currentUser={currentUser} />
-    </ProtectedRoute>
-  );
+          <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_ALERTS} userRole={currentUser.role}>
+            <AlertsManagement currentUser={currentUser} />
+          </ProtectedRoute>
+        );
+
+      case 'reportes':
+        return (
+          <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_REPORTS_PAGE} userRole={currentUser.role}>
+            <ReportsManagement currentUser={currentUser} />
+          </ProtectedRoute>
+        );
+
+      case 'horarios':
+        return (
+          <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_SHIFTS_SCHEDULE} userRole={currentUser.role}>
+            <ShiftsScheduleManagement currentUser={currentUser} />
+          </ProtectedRoute>
+        );
+
+      case 'mantenimiento':
+        return (
+          <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_MAINTENANCE} userRole={currentUser.role}>
+            <Maintenance currentUser={currentUser} />
+          </ProtectedRoute>
+        );
+
       default:
         return <Dashboard />;
     }
   };
 
-  // Mostrar loading mientras verifica sesión
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#0f0f13',
-        color: '#e8e6e1'
+        minHeight: '100vh', display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        background: '#0f0f13', color: '#e8e6e1'
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            width: '50px',
-            height: '50px',
+            width: 50, height: 50,
             border: '4px solid #2e2e42',
             borderTopColor: '#5b5bff',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
-          }}></div>
+          }} />
           <p>Cargando...</p>
         </div>
       </div>
     );
   }
 
-  // Si no hay usuario logueado, mostrar página de login
+  // ── Sin sesión → Login ───────────────────────────────────────────────────
   if (!currentUser) {
     return <Login onLoginSuccess={handleLogin} />;
   }
 
-  // Si hay usuario logueado, mostrar la aplicación
+  // ── App principal ────────────────────────────────────────────────────────
   return (
     <div className="app">
       <Sidebar
@@ -189,18 +157,14 @@ function App() {
         currentUser={currentUser}
       />
       <div className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-        <Header 
-          toggleSidebar={toggleSidebar} 
+        <Header
+          toggleSidebar={() => setSidebarOpen(o => !o)}
           sidebarOpen={sidebarOpen}
           currentUser={currentUser}
           onLogout={handleLogout}
         />
         {renderView()}
       </div>
-      {/*<AlertsSeeder 
-  currentUser={currentUser} 
-  onComplete={() => window.location.reload()}
-/> */}
     </div>
   );
 }
