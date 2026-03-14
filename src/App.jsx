@@ -16,25 +16,20 @@ import EmployeeManager from './components/EmployeeManager';
 import './styles/globalStyles.css';
 
 function App() {
-  const [sidebarOpen, setSidebarOpen]   = useState(true);
-  const [currentView, setCurrentView]   = useState('dashboard');
-  const [currentUser, setCurrentUser]   = useState(null);
-  const [isLoading, setIsLoading]       = useState(true);
+  const [sidebarOpen,  setSidebarOpen] = useState(true);
+  const [currentView,  setCurrentView] = useState('dashboard');
+  const [currentUser,  setCurrentUser] = useState(null);
+  const [isLoading,    setIsLoading]   = useState(true);
 
-  // ── Verificar sesión guardada al cargar ──────────────────────────────────
   useEffect(() => {
     const saved = localStorage.getItem('currentUser');
     if (saved) {
-      try {
-        setCurrentUser(JSON.parse(saved));
-      } catch {
-        localStorage.removeItem('currentUser');
-      }
+      try { setCurrentUser(JSON.parse(saved)); }
+      catch { localStorage.removeItem('currentUser'); }
     }
     setIsLoading(false);
   }, []);
 
-  // ── Auth handlers ────────────────────────────────────────────────────────
   const handleLogin = (user) => {
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
@@ -46,7 +41,8 @@ function App() {
     setCurrentView('dashboard');
   };
 
-  // ── Vistas protegidas ────────────────────────────────────────────────────
+  const goTo = (view) => setCurrentView(view);
+
   const renderView = () => {
     switch (currentView) {
 
@@ -81,8 +77,10 @@ function App() {
       case 'usuarios':
         return (
           <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_USERS} userRole={currentUser.role}>
-            {/* ✅ currentUser pasado — necesario para que EmployeeManager detecte el rol admin */}
-            <EmployeeManager currentUser={currentUser} />
+            <EmployeeManager
+              currentUser={currentUser}
+              onBack={() => goTo('dashboard')}
+            />
           </ProtectedRoute>
         );
 
@@ -119,13 +117,12 @@ function App() {
     }
   };
 
-  // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div style={{
         minHeight: '100vh', display: 'flex',
         alignItems: 'center', justifyContent: 'center',
-        background: '#0f0f13', color: '#e8e6e1'
+        background: '#0f0f13', color: '#e8e6e1',
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{
@@ -134,7 +131,7 @@ function App() {
             borderTopColor: '#5b5bff',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px'
+            margin: '0 auto 16px',
           }} />
           <p>Cargando...</p>
         </div>
@@ -142,12 +139,10 @@ function App() {
     );
   }
 
-  // ── Sin sesión → Login ───────────────────────────────────────────────────
   if (!currentUser) {
     return <Login onLoginSuccess={handleLogin} />;
   }
 
-  // ── App principal ────────────────────────────────────────────────────────
   return (
     <div className="app">
       <Sidebar

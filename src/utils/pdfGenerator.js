@@ -348,46 +348,57 @@ export const generateReceptionReport = (data, dateRange) => {
 // 5. MANTENIMIENTO
 export const generateMaintenanceReport = (data, dateRange) => {
   const doc = new jsPDF();
-  
+
   addHeader(
     doc,
     'Informe de Mantenimiento',
     `Período: ${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`
   );
-  
-  const sampleData = data.length > 0 ? data : [
-    {
-      date: dateRange.start,
-      workOrderId: 'OT-001',
-      type: 'Correctivo',
-      location: 'Habitación 305',
-      description: 'Reparación de aire acondicionado',
-      technician: 'José Martínez',
-      priority: 'Alta',
-      status: 'Completado'
-    }
-  ];
-  
+
   doc.autoTable({
     startY: 45,
-    head: [['Fecha', 'OT', 'Tipo', 'Ubicación', 'Técnico', 'Prioridad', 'Estado']],
-    body: sampleData.map(row => [
+    head: [['Fecha', 'Categoría', 'Sala/Área', 'Descripción', 'Asignado a', 'Prioridad', 'Estado', 'Completado']],
+    body: data.map(row => [
       formatDate(row.date),
-      row.workOrderId,
       row.type,
       row.location,
+      row.description,
       row.technician,
       row.priority,
-      row.status
+      row.status,
+      row.completedAt,
     ]),
     theme: 'grid',
-    headStyles: { 
+    headStyles: {
       fillColor: [245, 158, 11],
-      fontSize: PDF_CONFIG.fontSize.normal
+      fontSize: 9,
+      fontStyle: 'bold',
+      halign: 'center',
     },
-    styles: { fontSize: PDF_CONFIG.fontSize.small }
+    styles: {
+      fontSize: 8,
+      cellPadding: 3,
+      halign: 'center',
+      valign: 'middle',
+    },
+    columnStyles: {
+      2: { cellWidth: 25 }, // Sala
+      3: { cellWidth: 45, halign: 'left' }, // Descripción — más ancha
+    },
+    margin: { left: PDF_CONFIG.margin, right: PDF_CONFIG.margin },
   });
-  
+
+  // Resumen al final
+  const finalY = doc.lastAutoTable.finalY + 10;
+  const completados = data.filter(r => r.status === 'completado').length;
+  const pendientes  = data.filter(r => r.status !== 'completado').length;
+
+  doc.setFontSize(PDF_CONFIG.fontSize.normal);
+  doc.setTextColor(...PDF_CONFIG.colors.text);
+  doc.text(`Total de órdenes: ${data.length}`, PDF_CONFIG.margin, finalY);
+  doc.text(`Completadas: ${completados}`, PDF_CONFIG.margin, finalY + 7);
+  doc.text(`Pendientes: ${pendientes}`,   PDF_CONFIG.margin, finalY + 14);
+
   addFooter(doc);
   return doc;
 };

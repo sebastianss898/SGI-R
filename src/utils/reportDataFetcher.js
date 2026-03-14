@@ -209,32 +209,49 @@ export const fetchReceptionData = async (startDate, endDate) => {
  */
 export const fetchMaintenanceData = async (startDate, endDate) => {
   try {
-    // Intentar obtener de colección 'maintenance' si existe
-    const q = query(
-      collection(db, 'maintenance'),
-      where('fecha', '>=', startDate),
-      where('fecha', '<=', endDate),
-      orderBy('fecha', 'asc')
-    );
-    
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
+    const snapshot = await getDocs(collection(db, 'maintenance'));
+
+    console.log('=== DEBUG MAINTENANCE ===');
+    console.log('Total docs:', snapshot.docs.length);
+    console.log('Rango:', startDate, '→', endDate);
+
+    const allData = [];
+
+    snapshot.docs.forEach(doc => {
       const data = doc.data();
-      return {
-        id: doc.id,
-        date: data.fecha || data.date,
-        workOrderId: data.ordenTrabajo || data.workOrderId || doc.id,
-        type: data.tipo || data.type || 'Correctivo',
-        location: data.ubicacion || data.location || 'No especificada',
-        description: data.descripcion || data.description || '',
-        technician: data.tecnico || data.technician || 'No asignado',
-        priority: data.prioridad || data.priority || 'Media',
-        status: data.estado || data.status || 'Pendiente'
-      };
+
+      // ← usa createdAt, no fecha
+      let dateStr = '';
+      if (data.createdAt?.toDate) {
+        dateStr = data.createdAt.toDate().toISOString().split('T')[0];
+      }
+
+      console.log('Doc:', doc.id, '| dateStr:', dateStr, '| en rango:', dateStr >= startDate && dateStr <= endDate);
+
+      if (dateStr && dateStr >= startDate && dateStr <= endDate) {
+        allData.push({
+          id:          doc.id,
+          date:        dateStr,
+          workOrderId: doc.id.slice(0, 8).toUpperCase(),
+          type:        data.category    || 'Sin categoría',
+          location:    data.room        || 'No especificada',
+          description: data.description || '',
+          technician:  data.assignedTo  || 'No asignado',
+          priority:    data.priority    || 'normal',
+          status:      data.status      || 'Pendiente',
+          createdBy:   data.createdBy   || '',
+          completedAt: data.completedAt?.toDate
+            ? data.completedAt.toDate().toISOString().split('T')[0]
+            : '—',
+        });
+      }
     });
-  } catch (error) {
-    console.error('Error fetching maintenance data:', error);
-    // Si la colección no existe, retornar array vacío sin error
+
+    console.log('Docs en rango:', allData.length);
+    return allData.sort((a, b) => a.date.localeCompare(b.date));
+
+  } catch (err) {
+    console.error('Error fetching maintenance data:', err);
     return [];
   }
 };

@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../firebase';                      // ✅ auth compartido
+import { db, auth } from '../firebase';
 import {
-  collection, addDoc, updateDoc, deleteDoc,
-  doc, setDoc, query, orderBy, serverTimestamp, onSnapshot
+  collection, updateDoc,
+  doc, query, orderBy, serverTimestamp, onSnapshot
 } from 'firebase/firestore';
-import {
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail
-} from 'firebase/auth';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import {
   FaUser, FaPlus, FaTrash, FaEdit, FaLock,
   FaUserShield, FaUserTie, FaSearch,
   FaSpinner, FaCheck, FaTimes,
   FaBan, FaKey, FaDownload
 } from 'react-icons/fa';
-import { ROLES, ROLE_LABELS, ROLE_COLORS } from '../utils/roles'; // ✅ roles de tu sistema
+import { ROLES, ROLE_LABELS } from '../utils/roles';
 import '../styles/EmployeeManager.css';
+import { createEmployee, deleteEmployee } from '../utils/employeeFunctions';
+import ReauthModal from './ReauthModal';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONSTANTES
@@ -35,7 +34,6 @@ const DEPARTMENTS = [
   'Mantenimiento', 'Alimentos y Bebidas', 'Seguridad', 'Gerencia'
 ];
 
-// Mapa visual — usa los mismos keys de roles.js
 const ROLE_UI = {
   [ROLES.ADMIN]:        { icon: <FaUserShield />, color: '#8b5cf6' },
   [ROLES.MANAGER]:      { icon: <FaUserTie />,    color: '#3b82f6' },
@@ -52,30 +50,31 @@ const getAvatarColor = (id) =>
 
 // ═══════════════════════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
-// currentUser: { name, role, uid } — igual que TurnRegister
 // ═══════════════════════════════════════════════════════════════════════════
 
-export default function EmployeeManager({ currentUser }) {
+export default function EmployeeManager({ currentUser, onBack }) {
   const userName = currentUser?.name || currentUser || '';
-  // ✅ Usa ROLES.ADMIN === 'admin' — Sebastián entra si su role es 'admin'
-  const isAdmin = currentUser?.role === ROLES.ADMIN;
+  const isAdmin  = currentUser?.role === ROLES.ADMIN;
 
-  // ─── Estados ──────────────────────────────────────────────────────────────
-  const [employees, setEmployees]   = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [saving, setSaving]         = useState(false);
-  const [toast, setToast]           = useState(null);
+  // ─── Reauth ───────────────────────────────────────────────────────────────
+  const [reauthed,     setReauthed]    = useState(false);
+
+  // ─── Estados principales ──────────────────────────────────────────────────
+  const [users,        setUsers]       = useState([]);
+  const [loading,      setLoading]     = useState(true);
+  const [saving,       setSaving]      = useState(false);
+  const [toast,        setToast]       = useState(null);
 
   // Filtros
-  const [search, setSearch]         = useState('');
-  const [filterDept, setFilterDept] = useState('');
-  const [filterRole, setFilterRole] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [search,       setSearch]      = useState('');
+  const [filterDept,   setFilterDept]  = useState('');
+  const [filterRole,   setFilterRole]  = useState('');
+  const [filterStatus, setFilterStatus]= useState('');
 
   // Modales
-  const [modal, setModal]           = useState(null); // 'create' | 'edit' | 'reset' | 'delete'
-  const [selectedEmp, setSelectedEmp] = useState(null);
-  const [confirmName, setConfirmName] = useState('');
+  const [modal,        setModal]       = useState(null);
+  const [selectedUser, setSelectedUser]= useState(null);
+  const [confirmName,  setConfirmName] = useState('');
 
   // Formulario
   const emptyForm = {
@@ -84,23 +83,25 @@ export default function EmployeeManager({ currentUser }) {
     status: 'active', joinedAt: new Date().toISOString().split('T')[0],
     color: 'blue', initials: '',
   };
-  const [form, setForm] = useState(emptyForm);
-  const [tempPassword, setTempPassword] = useState('');
-  const [formError, setFormError] = useState('');
+  const [form,         setForm]        = useState(emptyForm);
+  const [tempPassword, setTempPassword]= useState('');
+  const [formError,    setFormError]   = useState('');
 
-  // ─── Firestore listener en tiempo real ────────────────────────────────────
+  // ─── Firestore listener — solo corre tras reauth ──────────────────────────
   useEffect(() => {
-    const q = query(collection(db, 'employees'), orderBy('createdAt', 'desc'));
+    if (!reauthed) return;
+
+    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
     }, (err) => {
-      console.error('Error cargando empleados:', err);
-      showToast('Error al cargar empleados', 'error');
+      console.error('Error cargando usuarios:', err);
+      showToast('Error al cargar usuarios', 'error');
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [reauthed]);
 
   // ─── Toast ────────────────────────────────────────────────────────────────
   const showToast = (msg, type = 'success') => {
@@ -108,32 +109,37 @@ export default function EmployeeManager({ currentUser }) {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // ─── Abrir modales ────────────────────────────────────────────────────────
+  // ─── Modales ──────────────────────────────────────────────────────────────
   const openCreate = () => {
     setForm({ ...emptyForm });
     setTempPassword('Hotel@' + Math.random().toString(36).slice(-5));
     setFormError('');
-    setSelectedEmp(null);
+    setSelectedUser(null);
     setModal('create');
   };
 
-  const openEdit = (emp) => {
+  const openEdit = (user) => {
     setForm({
-      name: emp.name, email: emp.email, position: emp.position || '',
-      department: emp.department || 'Recepción', role: emp.role || 'recepcionista',
-      status: emp.status || 'active', joinedAt: emp.joinedAt || '',
-      color: emp.color || 'blue', initials: emp.initials || getInitials(emp.name),
+      name:       user.name,
+      email:      user.email,
+      position:   user.position   || '',
+      department: user.department || 'Recepción',
+      role:       user.role       || ROLES.RECEPTIONIST,
+      status:     user.status     || 'active',
+      joinedAt:   user.joinedAt   || '',
+      color:      user.color      || 'blue',
+      initials:   user.initials   || getInitials(user.name),
     });
     setFormError('');
-    setSelectedEmp(emp);
+    setSelectedUser(user);
     setModal('edit');
   };
 
-  const openReset = (emp) => { setSelectedEmp(emp); setModal('reset'); };
-  const openDelete = (emp) => { setSelectedEmp(emp); setConfirmName(''); setModal('delete'); };
-  const closeModal = () => { setModal(null); setSelectedEmp(null); setFormError(''); };
+  const openReset  = (user) => { setSelectedUser(user); setModal('reset'); };
+  const openDelete = (user) => { setSelectedUser(user); setConfirmName(''); setModal('delete'); };
+  const closeModal = ()     => { setModal(null); setSelectedUser(null); setFormError(''); };
 
-  // ─── set campo formulario ─────────────────────────────────────────────────
+  // ─── Campo formulario ─────────────────────────────────────────────────────
   const setField = (k, v) => {
     setForm(p => {
       const updated = { ...p, [k]: v };
@@ -144,7 +150,6 @@ export default function EmployeeManager({ currentUser }) {
 
   // ─── CRUD ─────────────────────────────────────────────────────────────────
 
-  // Crear empleado
   const handleCreate = async () => {
     if (!form.name.trim() || !form.email.trim()) {
       setFormError('Nombre y correo son obligatorios.');
@@ -157,55 +162,37 @@ export default function EmployeeManager({ currentUser }) {
     setSaving(true);
     setFormError('');
     try {
-      // 1. Crear cuenta en Firebase Auth
-      const credential = await createUserWithEmailAndPassword(auth, form.email.trim(), tempPassword);
-      const newUid = credential.user.uid; // ✅ UID real de Firebase Auth
-
-      // 2. Enviar reset para que el empleado ponga su propia contraseña
-      await sendPasswordResetEmail(auth, form.email.trim());
-
-      // 3. Guardar perfil en Firestore usando el UID como ID del documento
-      //    Esto es clave para que las reglas de seguridad funcionen correctamente
-      await setDoc(doc(db, 'employees', newUid), {
+      await createEmployee({
         ...form,
-        name: form.name.trim(),
-        email: form.email.trim(),
-        initials: getInitials(form.name.trim()),
-        uid: newUid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        createdBy: userName,
+        password: tempPassword,
+        name:     form.name.trim(),
+        email:    form.email.trim().toLowerCase(),
       });
       showToast(`✓ ${form.name} creado — se envió reset al correo`);
       closeModal();
     } catch (err) {
-      console.error(err);
-      const msg = err.code === 'auth/email-already-in-use'
-        ? 'Ese correo ya está registrado en el sistema.'
-        : err.message;
-      setFormError(msg);
+      setFormError(err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  // Editar empleado
   const handleEdit = async () => {
     if (!form.name.trim()) { setFormError('El nombre es obligatorio.'); return; }
     setSaving(true);
     setFormError('');
     try {
-      await updateDoc(doc(db, 'employees', selectedEmp.id), {
-        name: form.name.trim(),
-        position: form.position,
+      await updateDoc(doc(db, 'users', selectedUser.id), {
+        name:       form.name.trim(),
+        position:   form.position,
         department: form.department,
-        role: form.role,
-        status: form.status,
-        joinedAt: form.joinedAt,
-        color: form.color,
-        initials: getInitials(form.name.trim()),
-        updatedAt: serverTimestamp(),
-        updatedBy: userName,
+        role:       form.role,
+        status:     form.status,
+        joinedAt:   form.joinedAt,
+        color:      form.color,
+        initials:   getInitials(form.name.trim()),
+        updatedAt:  serverTimestamp(),
+        updatedBy:  userName,
       });
       showToast(`✓ ${form.name} actualizado`);
       closeModal();
@@ -217,25 +204,25 @@ export default function EmployeeManager({ currentUser }) {
     }
   };
 
-  // Toggle activo/inactivo
-  const handleToggleStatus = async (emp) => {
-    const newStatus = emp.status === 'active' ? 'inactive' : 'active';
+  const handleToggleStatus = async (user) => {
+    const newStatus = user.status === 'active' ? 'inactive' : 'active';
     try {
-      await updateDoc(doc(db, 'employees', emp.id), {
-        status: newStatus, updatedAt: serverTimestamp(), updatedBy: userName,
+      await updateDoc(doc(db, 'users', user.id), {
+        status:    newStatus,
+        updatedAt: serverTimestamp(),
+        updatedBy: userName,
       });
-      showToast(`${newStatus === 'active' ? '✓ Activado' : '⊘ Desactivado'}: ${emp.name}`);
+      showToast(`${newStatus === 'active' ? '✓ Activado' : '⊘ Desactivado'}: ${user.name}`);
     } catch (err) {
       showToast('Error al cambiar estado', 'error');
     }
   };
 
-  // Reset contraseña
   const handleReset = async () => {
     setSaving(true);
     try {
-      await sendPasswordResetEmail(auth, selectedEmp.email);
-      showToast(`⟳ Reset enviado a ${selectedEmp.email}`);
+      await sendPasswordResetEmail(auth, selectedUser.email);
+      showToast(`⟳ Reset enviado a ${selectedUser.email}`);
       closeModal();
     } catch (err) {
       showToast('Error al enviar reset', 'error');
@@ -244,16 +231,15 @@ export default function EmployeeManager({ currentUser }) {
     }
   };
 
-  // Eliminar empleado
   const handleDelete = async () => {
-    if (confirmName !== selectedEmp.name) return;
+    if (confirmName !== selectedUser.name) return;
     setSaving(true);
     try {
-      await deleteDoc(doc(db, 'employees', selectedEmp.id));
-      showToast(`⊗ ${selectedEmp.name} eliminado`);
+      await deleteEmployee(selectedUser.uid);
+      showToast(`⊗ ${selectedUser.name} eliminado`);
       closeModal();
     } catch (err) {
-      showToast('Error al eliminar', 'error');
+      showToast('Error al eliminar: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
@@ -263,34 +249,34 @@ export default function EmployeeManager({ currentUser }) {
   const exportCSV = () => {
     const rows = [
       ['Nombre', 'Correo', 'Cargo', 'Departamento', 'Rol', 'Estado', 'Ingreso'],
-      ...employees.map(e => [
-        e.name, e.email, e.position, e.department, e.role, e.status, e.joinedAt
+      ...users.map(u => [
+        u.name, u.email, u.position, u.department, u.role, u.status, u.joinedAt
       ])
     ];
     const csv = rows.map(r => r.map(c => `"${c || ''}"`).join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-    a.download = `empleados_${new Date().toISOString().slice(0, 10)}.csv`;
+    const a   = document.createElement('a');
+    a.href    = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = `usuarios_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     showToast('↓ CSV exportado');
   };
 
   // ─── Filtrado ─────────────────────────────────────────────────────────────
-  const filtered = employees.filter(e => {
+  const filtered = users.filter(u => {
     const q = search.toLowerCase();
-    if (q && !`${e.name} ${e.email} ${e.position} ${e.department}`.toLowerCase().includes(q)) return false;
-    if (filterDept && e.department !== filterDept) return false;
-    if (filterRole && e.role !== filterRole) return false;
-    if (filterStatus && e.status !== filterStatus) return false;
+    if (q && !`${u.name} ${u.email} ${u.position} ${u.department}`.toLowerCase().includes(q)) return false;
+    if (filterDept   && u.department !== filterDept)   return false;
+    if (filterRole   && u.role       !== filterRole)   return false;
+    if (filterStatus && u.status     !== filterStatus) return false;
     return true;
   });
 
   // ─── Stats ────────────────────────────────────────────────────────────────
   const stats = {
-    total: employees.length,
-    active: employees.filter(e => e.status === 'active').length,
-    admins: employees.filter(e => e.role === 'admin').length,
-    depts: [...new Set(employees.map(e => e.department).filter(Boolean))].length,
+    total:  users.length,
+    active: users.filter(u => u.status === 'active').length,
+    admins: users.filter(u => u.role   === 'admin').length,
+    depts:  [...new Set(users.map(u => u.department).filter(Boolean))].length,
   };
 
   const fmtDate = (d) => {
@@ -300,7 +286,10 @@ export default function EmployeeManager({ currentUser }) {
     return `${parseInt(day)} ${ms[+m - 1]} ${y}`;
   };
 
-  // ─── Guard: solo admins ───────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GUARDS
+  // ═══════════════════════════════════════════════════════════════════════════
+
   if (!isAdmin) {
     return (
       <div className="em-root">
@@ -313,14 +302,24 @@ export default function EmployeeManager({ currentUser }) {
     );
   }
 
+  if (!reauthed) {
+    return (
+      <ReauthModal
+        title="Acceso a Gestión de Empleados"
+        onSuccess={() => setReauthed(true)}
+        onCancel={onBack || (() => window.history.back())}
+      />
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER
+  // RENDER PRINCIPAL
   // ═══════════════════════════════════════════════════════════════════════════
 
   return (
     <div className="em-root">
 
-      {/* Header */}
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="em-header">
         <div className="em-header-left">
           <h1>Gestión de Empleados</h1>
@@ -339,7 +338,7 @@ export default function EmployeeManager({ currentUser }) {
         </div>
       </header>
 
-      {/* Stats */}
+      {/* ── Stats ──────────────────────────────────────────────────────────── */}
       <div className="em-stats">
         <div className="em-stat-card">
           <span className="em-stat-label">Total empleados</span>
@@ -359,7 +358,7 @@ export default function EmployeeManager({ currentUser }) {
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* ── Filtros ────────────────────────────────────────────────────────── */}
       <div className="em-filters">
         <div className="em-search-wrap">
           <FaSearch className="em-search-icon" />
@@ -387,12 +386,12 @@ export default function EmployeeManager({ currentUser }) {
         </select>
       </div>
 
-      {/* Tabla */}
+      {/* ── Tabla ──────────────────────────────────────────────────────────── */}
       <div className="em-table-wrap">
         {loading ? (
-          <div className="em-loading"><FaSpinner className="spinning" /> Cargando empleados...</div>
+          <div className="em-loading"><FaSpinner className="spinning" /> Cargando usuarios...</div>
         ) : filtered.length === 0 ? (
-          <div className="em-empty">No se encontraron empleados con ese criterio.</div>
+          <div className="em-empty">No se encontraron usuarios con ese criterio.</div>
         ) : (
           <table className="em-table">
             <thead>
@@ -407,52 +406,56 @@ export default function EmployeeManager({ currentUser }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(emp => {
-                const col = getAvatarColor(emp.color);
-                const roleInfo = ROLE_UI[emp.role] || { icon: <FaUser />, color: '#9ca3af' };
-                const roleLabel = ROLE_LABELS[emp.role] || emp.role;
+              {filtered.map(user => {
+                const col       = getAvatarColor(user.color);
+                const roleInfo  = ROLE_UI[user.role] || { icon: <FaUser />, color: '#9ca3af' };
+                const roleLabel = ROLE_LABELS[user.role] || user.role;
                 return (
-                  <tr key={emp.id}>
+                  <tr key={user.id}>
                     <td>
                       <div className="em-emp-cell">
                         <div className="em-avatar" style={{ background: col.bg, color: col.text }}>
-                          {emp.initials || getInitials(emp.name)}
+                          {user.initials || getInitials(user.name)}
                         </div>
                         <div>
-                          <div className="em-emp-name">{emp.name}</div>
-                          <div className="em-emp-email">{emp.email}</div>
+                          <div className="em-emp-name">{user.name}</div>
+                          <div className="em-emp-email">{user.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="em-td-muted">{emp.position || '—'}</td>
-                    <td>{emp.department || '—'}</td>
+                    <td className="em-td-muted">{user.position || '—'}</td>
+                    <td>{user.department || '—'}</td>
                     <td>
-                      <span className="em-role-badge" style={{ color: roleInfo.color, borderColor: roleInfo.color + '44' }}>
+                      <span className="em-role-badge"
+                        style={{ color: roleInfo.color, borderColor: roleInfo.color + '44' }}>
                         {roleInfo.icon} {roleLabel}
                       </span>
                     </td>
                     <td>
-                      <span className={`em-status-badge ${emp.status === 'active' ? 'active' : 'inactive'}`}>
-                        {emp.status === 'active' ? '● Activo' : '○ Inactivo'}
+                      <span className={`em-status-badge ${user.status === 'active' ? 'active' : 'inactive'}`}>
+                        {user.status === 'active' ? '● Activo' : '○ Inactivo'}
                       </span>
                     </td>
-                    <td className="em-td-muted">{fmtDate(emp.joinedAt)}</td>
+                    <td className="em-td-muted">{fmtDate(user.joinedAt)}</td>
                     <td>
                       <div className="em-actions">
-                        <button className="em-icon-btn" title="Editar" onClick={() => openEdit(emp)}>
+                        <button className="em-icon-btn" title="Editar"
+                          onClick={() => openEdit(user)}>
                           <FaEdit />
                         </button>
-                        <button className="em-icon-btn amber" title="Reset contraseña" onClick={() => openReset(emp)}>
+                        <button className="em-icon-btn amber" title="Reset contraseña"
+                          onClick={() => openReset(user)}>
                           <FaKey />
                         </button>
                         <button
-                          className={`em-icon-btn ${emp.status === 'active' ? 'red' : 'green'}`}
-                          title={emp.status === 'active' ? 'Desactivar' : 'Activar'}
-                          onClick={() => handleToggleStatus(emp)}
+                          className={`em-icon-btn ${user.status === 'active' ? 'red' : 'green'}`}
+                          title={user.status === 'active' ? 'Desactivar' : 'Activar'}
+                          onClick={() => handleToggleStatus(user)}
                         >
-                          {emp.status === 'active' ? <FaBan /> : <FaCheck />}
+                          {user.status === 'active' ? <FaBan /> : <FaCheck />}
                         </button>
-                        <button className="em-icon-btn red" title="Eliminar" onClick={() => openDelete(emp)}>
+                        <button className="em-icon-btn red" title="Eliminar"
+                          onClick={() => openDelete(user)}>
                           <FaTrash />
                         </button>
                       </div>
@@ -469,22 +472,17 @@ export default function EmployeeManager({ currentUser }) {
       {(modal === 'create' || modal === 'edit') && (
         <div className="em-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
           <div className="em-modal">
-
             <div className="em-modal-header">
               <h2>{modal === 'create' ? 'Nuevo empleado' : 'Editar empleado'}</h2>
               <button className="em-modal-close" onClick={closeModal}><FaTimes /></button>
             </div>
-
             <div className="em-modal-body">
-              {/* Avatar preview + colores */}
+
               <div className="em-avatar-row">
-                <div
-                  className="em-avatar-preview"
-                  style={{
-                    background: getAvatarColor(form.color).bg,
-                    color: getAvatarColor(form.color).text
-                  }}
-                >
+                <div className="em-avatar-preview" style={{
+                  background: getAvatarColor(form.color).bg,
+                  color:      getAvatarColor(form.color).text,
+                }}>
                   {form.initials || '?'}
                 </div>
                 <div>
@@ -502,7 +500,6 @@ export default function EmployeeManager({ currentUser }) {
                 </div>
               </div>
 
-              {/* Nombre */}
               <div className="em-form-row">
                 <div className="em-field">
                   <label className="em-field-label">Nombre *</label>
@@ -530,13 +527,12 @@ export default function EmployeeManager({ currentUser }) {
                 </div>
               </div>
 
-              {/* Email — solo en crear */}
               <div className="em-field">
                 <label className="em-field-label">Correo electrónico *</label>
                 <input
                   className="em-input"
                   type="email"
-                  placeholder="correo@hotel.cl"
+                  placeholder="correo@hotel.com"
                   value={form.email}
                   disabled={modal === 'edit'}
                   onChange={e => setField('email', e.target.value)}
@@ -546,7 +542,6 @@ export default function EmployeeManager({ currentUser }) {
                 )}
               </div>
 
-              {/* Contraseña temporal — solo en crear */}
               {modal === 'create' && (
                 <div className="em-field">
                   <label className="em-field-label">
@@ -561,7 +556,6 @@ export default function EmployeeManager({ currentUser }) {
                 </div>
               )}
 
-              {/* Cargo + Departamento */}
               <div className="em-form-row">
                 <div className="em-field">
                   <label className="em-field-label">Cargo</label>
@@ -574,17 +568,18 @@ export default function EmployeeManager({ currentUser }) {
                 </div>
                 <div className="em-field">
                   <label className="em-field-label">Departamento</label>
-                  <select className="em-select em-input" value={form.department} onChange={e => setField('department', e.target.value)}>
+                  <select className="em-select em-input" value={form.department}
+                    onChange={e => setField('department', e.target.value)}>
                     {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
                   </select>
                 </div>
               </div>
 
-              {/* Rol + Estado */}
               <div className="em-form-row">
                 <div className="em-field">
                   <label className="em-field-label">Rol</label>
-                  <select className="em-select em-input" value={form.role} onChange={e => setField('role', e.target.value)}>
+                  <select className="em-select em-input" value={form.role}
+                    onChange={e => setField('role', e.target.value)}>
                     {Object.entries(ROLE_LABELS).map(([k, label]) => (
                       <option key={k} value={k}>{label}</option>
                     ))}
@@ -592,14 +587,14 @@ export default function EmployeeManager({ currentUser }) {
                 </div>
                 <div className="em-field">
                   <label className="em-field-label">Estado</label>
-                  <select className="em-select em-input" value={form.status} onChange={e => setField('status', e.target.value)}>
+                  <select className="em-select em-input" value={form.status}
+                    onChange={e => setField('status', e.target.value)}>
                     <option value="active">Activo</option>
                     <option value="inactive">Inactivo</option>
                   </select>
                 </div>
               </div>
 
-              {/* Fecha ingreso */}
               <div className="em-field">
                 <label className="em-field-label">Fecha de ingreso</label>
                 <input
@@ -612,7 +607,6 @@ export default function EmployeeManager({ currentUser }) {
 
               {formError && <div className="em-form-error">{formError}</div>}
             </div>
-
             <div className="em-modal-footer">
               <button className="em-btn em-btn-secondary" onClick={closeModal}>Cancelar</button>
               <button
@@ -622,7 +616,9 @@ export default function EmployeeManager({ currentUser }) {
               >
                 {saving
                   ? <><FaSpinner className="spinning" /> Guardando...</>
-                  : modal === 'create' ? <><FaPlus /> Crear empleado</> : <><FaCheck /> Guardar cambios</>
+                  : modal === 'create'
+                    ? <><FaPlus /> Crear empleado</>
+                    : <><FaCheck /> Guardar cambios</>
                 }
               </button>
             </div>
@@ -631,7 +627,7 @@ export default function EmployeeManager({ currentUser }) {
       )}
 
       {/* ── MODAL RESET CONTRASEÑA ─────────────────────────────────────────── */}
-      {modal === 'reset' && selectedEmp && (
+      {modal === 'reset' && selectedUser && (
         <div className="em-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
           <div className="em-modal em-modal-sm">
             <div className="em-modal-header">
@@ -640,29 +636,29 @@ export default function EmployeeManager({ currentUser }) {
             </div>
             <div className="em-modal-body">
               <div className="em-alert em-alert-amber">
-                ⚠ Se enviará un correo de restablecimiento al empleado. Podrá ingresar con su nueva contraseña.
+                ⚠ Se enviará un correo de restablecimiento al empleado.
               </div>
               <div className="em-emp-preview">
-                <div
-                  className="em-avatar"
-                  style={{
-                    background: getAvatarColor(selectedEmp.color).bg,
-                    color: getAvatarColor(selectedEmp.color).text,
-                    width: 44, height: 44, fontSize: '1rem'
-                  }}
-                >
-                  {selectedEmp.initials}
+                <div className="em-avatar" style={{
+                  background: getAvatarColor(selectedUser.color).bg,
+                  color:      getAvatarColor(selectedUser.color).text,
+                  width: 44, height: 44, fontSize: '1rem',
+                }}>
+                  {selectedUser.initials || getInitials(selectedUser.name)}
                 </div>
                 <div>
-                  <div className="em-emp-name">{selectedEmp.name}</div>
-                  <div className="em-emp-email">{selectedEmp.email}</div>
+                  <div className="em-emp-name">{selectedUser.name}</div>
+                  <div className="em-emp-email">{selectedUser.email}</div>
                 </div>
               </div>
             </div>
             <div className="em-modal-footer">
               <button className="em-btn em-btn-secondary" onClick={closeModal}>Cancelar</button>
               <button className="em-btn em-btn-amber" onClick={handleReset} disabled={saving}>
-                {saving ? <><FaSpinner className="spinning" /> Enviando...</> : <><FaKey /> Enviar reset</>}
+                {saving
+                  ? <><FaSpinner className="spinning" /> Enviando...</>
+                  : <><FaKey /> Enviar reset</>
+                }
               </button>
             </div>
           </div>
@@ -670,7 +666,7 @@ export default function EmployeeManager({ currentUser }) {
       )}
 
       {/* ── MODAL ELIMINAR ─────────────────────────────────────────────────── */}
-      {modal === 'delete' && selectedEmp && (
+      {modal === 'delete' && selectedUser && (
         <div className="em-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
           <div className="em-modal em-modal-sm">
             <div className="em-modal-header">
@@ -682,28 +678,25 @@ export default function EmployeeManager({ currentUser }) {
                 ⊗ Esta acción es permanente. El empleado perderá todo acceso al sistema.
               </div>
               <div className="em-emp-preview">
-                <div
-                  className="em-avatar"
-                  style={{
-                    background: getAvatarColor(selectedEmp.color).bg,
-                    color: getAvatarColor(selectedEmp.color).text,
-                    width: 44, height: 44, fontSize: '1rem'
-                  }}
-                >
-                  {selectedEmp.initials}
+                <div className="em-avatar" style={{
+                  background: getAvatarColor(selectedUser.color).bg,
+                  color:      getAvatarColor(selectedUser.color).text,
+                  width: 44, height: 44, fontSize: '1rem',
+                }}>
+                  {selectedUser.initials || getInitials(selectedUser.name)}
                 </div>
                 <div>
-                  <div className="em-emp-name">{selectedEmp.name}</div>
-                  <div className="em-emp-email">{selectedEmp.email}</div>
+                  <div className="em-emp-name">{selectedUser.name}</div>
+                  <div className="em-emp-email">{selectedUser.email}</div>
                 </div>
               </div>
               <div className="em-field" style={{ marginTop: 16 }}>
                 <label className="em-field-label">
-                  Escribe <strong style={{ color: '#f87171' }}>{selectedEmp.name}</strong> para confirmar
+                  Escribe <strong style={{ color: '#f87171' }}>{selectedUser.name}</strong> para confirmar
                 </label>
                 <input
                   className="em-input"
-                  placeholder={selectedEmp.name}
+                  placeholder={selectedUser.name}
                   value={confirmName}
                   onChange={e => setConfirmName(e.target.value)}
                 />
@@ -714,16 +707,19 @@ export default function EmployeeManager({ currentUser }) {
               <button
                 className="em-btn em-btn-danger"
                 onClick={handleDelete}
-                disabled={confirmName !== selectedEmp.name || saving}
+                disabled={confirmName !== selectedUser.name || saving}
               >
-                {saving ? <><FaSpinner className="spinning" /> Eliminando...</> : <><FaTrash /> Sí, eliminar</>}
+                {saving
+                  ? <><FaSpinner className="spinning" /> Eliminando...</>
+                  : <><FaTrash /> Sí, eliminar</>
+                }
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Toast */}
+      {/* ── Toast ──────────────────────────────────────────────────────────── */}
       {toast && <div className={`em-toast ${toast.type}`}>{toast.msg}</div>}
 
     </div>
