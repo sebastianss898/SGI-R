@@ -1,230 +1,531 @@
-// src/components/Dashboard.jsx - Actualizado con NoteCard y CountrySearch
-import React, { useState } from 'react';
+// src/components/Dashboard.jsx
+import React, { useState, useEffect, useCallback } from "react";
+import { db } from "../firebase";
 import {
-  FaFileAlt,
-  FaExclamationCircle,
-  FaCheckCircle,
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  where,
+  onSnapshot,
+  limit,
+} from "firebase/firestore";
+import {
+  FaPlus,
+  FaBed,
+  FaSignInAlt,
+  FaSignOutAlt,
+  FaMoneyBillWave,
+  FaWrench,
+  FaBoxOpen,
+  FaCalendarAlt,
+  FaChartBar,
+  FaUsers,
+  FaBell,
   FaClock,
-  FaPlus
-} from 'react-icons/fa';
-import NoteModal from './NoteModal';
-import NoteCard from './NoteCard';
-import '../styles/globalStyles.css';
+  FaFileAlt,
+  FaExclamationTriangle,
+  FaCheckCircle,
+  FaArrowUp,
+  FaArrowDown,
+  FaMoon,
+  FaSun,
+  FaCloudSun,
+  FaSpinner,
+} from "react-icons/fa";
+import NoteModal from "./NoteModal";
+import NoteCard from "./NoteCard";
+import InventoryRequest from "./InventoryRequest";
+import {
+  hasPermission,
+  PERMISSIONS,
+  ROLE_LABELS,
+  ROLE_COLORS,
+} from "../utils/roles";
+import "../styles/Dashboard.css";
+import "../styles/globalStyles.css";
+import { InventoryWidget, IvaWidget } from "./DashboardWidgets";
+import "../styles/DashboardWidgets.css";
 
-const Dashboard = () => {
-  const [notes, setNotes] = useState([
-   /* {
-      id: '1',
-      title: 'Llegada grupo corporativo',
-      description: 'Grupo de 15 personas de empresa TechCorp. Check-in a las 14:00hrs. Solicitan sala de reuniones.',
-      category: 'check-in',
-      priority: 'high',
-      date: '2026-02-12',
-      startTime: '09:30',
-      endTime: '17:30',
-      user: 'María González',
-      status: 'pending',
-      country: null
-    },
-    {
-      id: '2',
-      title: 'Paquete urgente habitación 305',
-      description: 'Documentos importantes para el Sr. Ramírez. Entregar personalmente. Requiere firma.',
-      category: 'package',
-      priority: 'urgent',
-      date: '2026-02-12',
-      startTime: '08:15',
-      endTime: '12:00',
-      user: 'Carlos Pérez',
-      status: 'pending',
-      country: null
-    },
-    {
-      id: '3',
-      title: 'Solicitud late check-out',
-      description: 'Habitación 512 solicita salida a las 16:00hrs. Aprobado por gerencia.',
-      category: 'check-out',
-      priority: 'medium',
-      date: '2026-02-11',
-      startTime: '12:00',
-      endTime: '16:00',
-      user: 'Ana Martínez',
-      status: 'completed',
-      country: null
-    },
-    {
-      id: '4',
-      title: 'Mantenimiento en lobby',
-      description: 'Programado mantenimiento de aire acondicionado para mañana 06:00hrs.',
-      category: 'maintenance',
-      priority: 'medium',
-      date: '2026-02-11',
-      startTime: '06:00',
-      endTime: '10:00',
-      user: 'Jorge Silva',
-      status: 'pending',
-      country: null
-    },
-    {
-      id: '5',
-      title: 'Visita importante - VIP',
-      description: 'El Sr. Thompson llegará esta tarde. Preparar suite presidencial con amenidades especiales.',
-      category: 'visitor',
-      priority: 'high',
-      date: '2026-02-11',
-      startTime: '15:30',
-      endTime: '18:00',
-      user: 'María González',
-      status: 'in-progress',
-      country: null
-    },
-    {
-      id: '6',
-      title: 'Reservación confirmada',
-      description: 'Familia Johnson confirma reservación para 3 habitaciones del 15 al 20 de febrero.',
-      category: 'check-in',
-      priority: 'low',
-      date: '2026-02-10',
-      startTime: '14:20',
-      endTime: '22:00',
-      user: 'Carlos Pérez',
-      status: 'completed',
-      country: null
-    },*/
-  ]);
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const GREETING = () => {
+  const h = new Date().getHours();
+  if (h < 12) return { text: "Buenos días", icon: <FaSun /> };
+  if (h < 19) return { text: "Buenas tardes", icon: <FaCloudSun /> };
+  return { text: "Buenas noches", icon: <FaMoon /> };
+};
 
-  const [selectedFilter, setSelectedFilter] = useState('all');
+const fmtCOP = (n) =>
+  new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(n || 0);
+
+const todayISO = new Date().toISOString().split("T")[0];
+
+// ── Acciones rápidas — definición dinámica por rol ───────────────────────────
+const buildQuickActions = (role, setCurrentView, openInventory) => {
+  const all = [
+    {
+      id: "turno",
+      icon: <FaClock />,
+      label: "Registrar turno",
+      desc: "Abrir registro de turno",
+      color: "#5b5bff",
+      bg: "rgba(91,91,255,0.12)",
+      permission: PERMISSIONS.VIEW_SHIFTS,
+      action: () => setCurrentView("turnos"),
+    },
+    {
+      id: "mantenimiento",
+      icon: <FaWrench />,
+      label: "Mantenimiento",
+      desc: "Nueva solicitud",
+      color: "#f87171",
+      bg: "rgba(248,113,113,0.12)",
+      permission: PERMISSIONS.VIEW_MAINTENANCE,
+      action: () => setCurrentView("mantenimiento"),
+    },
+    {
+      id: "inventario",
+      icon: <FaBoxOpen />,
+      label: "Usar insumos",
+      desc: "Descontar del inventario",
+      color: "#c084fc",
+      bg: "rgba(192,132,252,0.12)",
+      permission: PERMISSIONS.VIEW_INVENTORY,
+      action: openInventory,
+    },
+    {
+      id: "reportes",
+      icon: <FaChartBar />,
+      label: "Reportes",
+      desc: "Ver informes",
+      color: "#60a5fa",
+      bg: "rgba(96,165,250,0.12)",
+      permission: PERMISSIONS.VIEW_REPORTS_PAGE,
+      action: () => setCurrentView("reportes"),
+    },
+    {
+      id: "alertas",
+      icon: <FaBell />,
+      label: "Alertas",
+      desc: "Gestionar avisos",
+      color: "#fbbf24",
+      bg: "rgba(251,191,36,0.12)",
+      permission: PERMISSIONS.VIEW_ALERTS,
+      action: () => setCurrentView("alertas"),
+    },
+    {
+      id: "horarios",
+      icon: <FaCalendarAlt />,
+      label: "Horarios",
+      desc: "Ver turnos asignados",
+      color: "#34d399",
+      bg: "rgba(52,211,153,0.12)",
+      permission: PERMISSIONS.VIEW_SHIFTS_SCHEDULE,
+      action: () => setCurrentView("horarios"),
+    },
+    {
+      id: "usuarios",
+      icon: <FaUsers />,
+      label: "Empleados",
+      desc: "Gestionar personal",
+      color: "#a78bfa",
+      bg: "rgba(167,139,250,0.12)",
+      permission: PERMISSIONS.CREATE_USER,
+      action: () => setCurrentView("usuarios"),
+    },
+  ];
+  return all.filter((a) => hasPermission(role, a.permission));
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPONENTE PRINCIPAL
+// ════════════════════════════════════════════════════════════════════════════
+const Dashboard = ({ currentUser, setCurrentView }) => {
+  // ── Estados de datos en vivo ─────────────────────────────────────────────
+  const [metrics, setMetrics] = useState(null);
+  const [loadingMet, setLoadingMet] = useState(true);
+  const [lowStock, setLowStock] = useState([]);
+  const [pendMaint, setPendMaint] = useState(0);
+
+  // ── Notas ────────────────────────────────────────────────────────────────
+  const [notes, setNotes] = useState([]);
+  const [selectedFilter, setSelectedFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleSaveNote = (newNote) => {
-    setNotes(prev => [newNote, ...prev]);
-  };
+  // ── Inventario modal ─────────────────────────────────────────────────────
+  const [showInventory, setShowInventory] = useState(false);
 
-  const handleUpdateNote = (updatedNote) => {
-    setNotes(prev => prev.map(note =>
-      note.id === updatedNote.id ? updatedNote : note
-    ));
-  };
+  const role = currentUser?.role || "receptionist";
+  const greeting = GREETING();
 
-  const handleDeleteNote = (noteId) => {
-    if (window.confirm('¿Estás seguro de eliminar esta nota?')) {
-      setNotes(prev => prev.filter(note => note.id !== noteId));
+  // ── Acciones rápidas ─────────────────────────────────────────────────────
+  const quickActions = buildQuickActions(
+    role,
+    setCurrentView || (() => {}),
+    () => setShowInventory(true),
+  );
+
+  // ── Cargar métricas del día ───────────────────────────────────────────────
+  const loadMetrics = useCallback(async () => {
+    setLoadingMet(true);
+    try {
+      // Turnos del día
+      const turnosSnap = await getDocs(
+        query(collection(db, "turnos"), where("date", "==", todayISO)),
+      );
+      const turnos = turnosSnap.docs.map((d) => d.data());
+
+      const allCI = turnos.flatMap((t) => t.checkins || []);
+      const checkIns = allCI.filter((c) => c.type === "in").length;
+      const checkOuts = allCI.filter((c) => c.type === "out").length;
+      const ingresos = turnos.reduce(
+        (s, t) => s + (t.totals?.ingresos || 0),
+        0,
+      );
+      const gastos = turnos.reduce((s, t) => s + (t.totals?.gastos || 0), 0);
+
+      // Mantenimiento pendiente
+      const maintSnap = await getDocs(
+        query(
+          collection(db, "maintenance"),
+          where("status", "==", "pendiente"),
+        ),
+      );
+      setPendMaint(maintSnap.size);
+
+      // Inventario bajo stock
+      const invSnap = await getDocs(collection(db, "inventario"));
+      const low = invSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((i) => i.activo !== false && i.stockActual <= i.stockMinimo);
+      setLowStock(low);
+
+      setMetrics({
+        checkIns,
+        checkOuts,
+        ingresos,
+        gastos,
+        turnos: turnos.length,
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMet(false);
     }
+  }, []);
+
+  // ── Notas en tiempo real ─────────────────────────────────────────────────
+  useEffect(() => {
+    const unsub = onSnapshot(
+      query(collection(db, "notes"), orderBy("createdAt", "desc"), limit(30)),
+      (snap) => setNotes(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (err) => console.error(err),
+    );
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    loadMetrics();
+  }, [loadMetrics]);
+
+  // ── CRUD notas ───────────────────────────────────────────────────────────
+  const handleSaveNote = (n) => setNotes((p) => [n, ...p]);
+  const handleUpdateNote = (n) =>
+    setNotes((p) => p.map((x) => (x.id === n.id ? n : x)));
+  const handleDeleteNote = (id) => {
+    if (window.confirm("¿Eliminar esta nota?"))
+      setNotes((p) => p.filter((x) => x.id !== id));
   };
 
-  const filteredNotes = selectedFilter === 'all'
-    ? notes
-    : notes.filter(note => note.category === selectedFilter);
+  const filteredNotes =
+    selectedFilter === "all"
+      ? notes
+      : notes.filter((n) => n.category === selectedFilter);
 
-  const urgentCount = notes.filter(n => n.priority === 'urgent' || n.priority === 'high').length;
-
+  // ════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ════════════════════════════════════════════════════════════════════════
   return (
-    <div className="dashboard">
-      {/* Stats Cards */}
-      <div className="stats-grid">
-        {/*<div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: '#E3F2FD' }}>
-            <FaFileAlt style={{ color: '#1A237E' }} />
-          </div>
-          <div className="stat-content">
-            <h3>{notes.length}</h3>
-            <p>Total Notas</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: '#FFEBEE' }}>
-            <FaExclamationCircle style={{ color: '#F44336' }} />
-          </div>
-          <div className="stat-content">
-            <h3>{urgentCount}</h3>
-            <p>Urgentes</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: '#E8F5E9' }}>
-            <FaCheckCircle style={{ color: '#4CAF50' }} />
-          </div>
-          <div className="stat-content">
-            <h3>{notes.filter(n => n.status === 'completed').length}</h3>
-            <p>Completadas</p>
+    <div className="db-root">
+      {/* ── BIENVENIDA ─────────────────────────────────────────────────── */}
+      <div className="db-welcome">
+        <div className="db-welcome-left">
+          <div className="db-greeting-icon">{greeting.icon}</div>
+          <div>
+            <h1 className="db-welcome-title">
+              {greeting.text},{" "}
+              {currentUser?.name?.split(" ")[0] || "bienvenido"}
+            </h1>
+            <p className="db-welcome-sub">
+              <span
+                className="db-role-pill"
+                style={{
+                  background: (ROLE_COLORS[role] || "#818cf8") + "22",
+                  color: ROLE_COLORS[role] || "#818cf8",
+                  borderColor: (ROLE_COLORS[role] || "#818cf8") + "44",
+                }}
+              >
+                {ROLE_LABELS[role] || role}
+              </span>
+              &nbsp;·&nbsp;
+              {new Date().toLocaleDateString("es-CO", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
+            </p>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: '#FFF3E0' }}>
-            <FaClock style={{ color: '#FF9800' }} />
-          </div>
-          <div className="stat-content">
-            <h3>{notes.filter(n => n.status === 'pending').length}</h3>
-            <p>Pendientes</p>
-          </div>
-        </div>*/}
-      </div>
-
-      {/* Filters */}
-      <div className="filters-section">
-        <div className="filter-tabs">
-          <button
-            className={`filter-tab ${selectedFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setSelectedFilter('all')}
-          >
-            Todas
-          </button>
-          <button
-            className={`filter-tab ${selectedFilter === 'check-in' ? 'active' : ''}`}
-            onClick={() => setSelectedFilter('check-in')}
-          >
-            Check-in
-          </button>
-          <button
-            className={`filter-tab ${selectedFilter === 'check-out' ? 'active' : ''}`}
-            onClick={() => setSelectedFilter('check-out')}
-          >
-            Check-out
-          </button>
-          <button
-            className={`filter-tab ${selectedFilter === 'package' ? 'active' : ''}`}
-            onClick={() => setSelectedFilter('package')}
-          >
-            Paquetes
-          </button>
-          <button
-            className={`filter-tab ${selectedFilter === 'visitor' ? 'active' : ''}`}
-            onClick={() => setSelectedFilter('visitor')}
-          >
-            Visitas
-          </button>
+        {/* Alertas rápidas */}
+        <div className="db-alerts-row">
+          {pendMaint > 0 && (
+            <button
+              className="db-alert-chip warn"
+              onClick={() => setCurrentView?.("mantenimiento")}
+            >
+              <FaExclamationTriangle /> {pendMaint} mant. pendiente
+              {pendMaint > 1 ? "s" : ""}
+            </button>
+          )}
+          {lowStock.length > 0 && (
+            <button
+              className="db-alert-chip danger"
+              onClick={() => setCurrentView?.("inventario")}
+            >
+              <FaBoxOpen /> {lowStock.length} insumo
+              {lowStock.length > 1 ? "s" : ""} bajo stock
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Notes Section */}
-      <div className="notes-section">
-        <div className="section-header">
-          <h2>Historial de Notas</h2>
-          <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-            <FaPlus /> Nueva Nota
-          </button>
-        </div>
+      {/* ── MÉTRICAS DEL DÍA ───────────────────────────────────────────── */}
+      {hasPermission(role, PERMISSIONS.VIEW_FINANCES) && (
+        <section className="db-section">
+          <h2 className="db-section-title">Resumen del día</h2>
+          {loadingMet ? (
+            <div className="db-loading-row">
+              <FaSpinner className="spinning" />
+              <span>Cargando métricas…</span>
+            </div>
+          ) : (
+            <div className="db-metrics-grid">
+              <div className="db-metric green">
+                <div className="db-metric-icon">
+                  <FaSignInAlt />
+                </div>
+                <div>
+                  <span className="db-metric-val">
+                    {metrics?.checkIns ?? 0}
+                  </span>
+                  <span className="db-metric-label">Check-ins</span>
+                </div>
+              </div>
+              <div className="db-metric blue">
+                <div className="db-metric-icon">
+                  <FaSignOutAlt />
+                </div>
+                <div>
+                  <span className="db-metric-val">
+                    {metrics?.checkOuts ?? 0}
+                  </span>
+                  <span className="db-metric-label">Check-outs</span>
+                </div>
+              </div>
+              <div className="db-metric purple">
+                <div className="db-metric-icon">
+                  <FaMoneyBillWave />
+                </div>
+                <div>
+                  <span className="db-metric-val">
+                    {fmtCOP(metrics?.ingresos)}
+                  </span>
+                  <span className="db-metric-label">Ingresos hoy</span>
+                </div>
+              </div>
+              <div className="db-metric red">
+                <div className="db-metric-icon">
+                  <FaArrowDown />
+                </div>
+                <div>
+                  <span className="db-metric-val">
+                    {fmtCOP(metrics?.gastos)}
+                  </span>
+                  <span className="db-metric-label">Gastos hoy</span>
+                </div>
+              </div>
+              <div className="db-metric amber">
+                <div className="db-metric-icon">
+                  <FaWrench />
+                </div>
+                <div>
+                  <span className="db-metric-val">{pendMaint}</span>
+                  <span className="db-metric-label">Mant. pendiente</span>
+                </div>
+              </div>
+              <div className="db-metric teal">
+                <div className="db-metric-icon">
+                  <FaBoxOpen />
+                </div>
+                <div>
+                  <span className="db-metric-val">{lowStock.length}</span>
+                  <span className="db-metric-label">Stock bajo</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
-        <div className="notes-grid">
-          {filteredNotes.map((note) => (
-            <NoteCard
-              key={note.id}
-              note={note}
-              onUpdate={handleUpdateNote}
-              onDelete={handleDeleteNote}
-            />
+      {/* ── ACCIONES RÁPIDAS ───────────────────────────────────────────── */}
+      <section className="db-section">
+        <h2 className="db-section-title">Acciones rápidas</h2>
+        <div className="db-actions-grid">
+          {quickActions.map((action) => (
+            <button
+              key={action.id}
+              className="db-action-card"
+              style={{ "--ac": action.color, "--ac-bg": action.bg }}
+              onClick={action.action}
+            >
+              <div className="db-action-icon">{action.icon}</div>
+              <div className="db-action-text">
+                <span className="db-action-label">{action.label}</span>
+                <span className="db-action-desc">{action.desc}</span>
+              </div>
+              <div className="db-action-arrow">›</div>
+            </button>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Modal */}
+      <section className="db-section">
+        <h2 className="db-section-title">Herramientas rápidas</h2>
+        <div className="db-widgets-grid">
+          
+          <InventoryWidget currentUser={currentUser} />
+          
+          <IvaWidget />
+        </div>
+      </section>
+
+      {/* ── STOCK BAJO (si hay) ─────────────────────────────────────────── */}
+      {lowStock.length > 0 &&
+        hasPermission(role, PERMISSIONS.VIEW_INVENTORY) && (
+          <section className="db-section">
+            <div className="db-section-header">
+              <h2 className="db-section-title">Insumos con stock bajo</h2>
+              <button
+                className="db-link-btn"
+                onClick={() => setCurrentView?.("inventario")}
+              >
+                Ver inventario completo →
+              </button>
+            </div>
+            <div className="db-lowstock-grid">
+              {lowStock.slice(0, 6).map((item) => (
+                <div key={item.id} className="db-lowstock-card">
+                  <div className="db-lowstock-name">{item.nombre}</div>
+                  <div className="db-lowstock-row">
+                    <span className="db-lowstock-stock warn">
+                      {item.stockActual} {item.unidad}
+                    </span>
+                    <span className="db-lowstock-min">
+                      mín. {item.stockMinimo}
+                    </span>
+                  </div>
+                  <div className="db-lowstock-bar">
+                    <div
+                      className="db-lowstock-fill"
+                      style={{
+                        width: `${Math.min((item.stockActual / (item.stockMinimo || 1)) * 100, 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+      {/* ── NOTAS ──────────────────────────────────────────────────────── */}
+      <section className="db-section">
+        <div className="db-section-header">
+          <div>
+            <h2 className="db-section-title">Notas del hotel</h2>
+          </div>
+          <div className="db-notes-controls">
+            <div className="db-filter-tabs">
+              {["all", "check-in", "check-out", "package", "visitor"].map(
+                (f) => (
+                  <button
+                    key={f}
+                    className={`db-filter-tab ${selectedFilter === f ? "active" : ""}`}
+                    onClick={() => setSelectedFilter(f)}
+                  >
+                    {f === "all"
+                      ? "Todas"
+                      : f === "check-in"
+                        ? "Check-in"
+                        : f === "check-out"
+                          ? "Check-out"
+                          : f === "package"
+                            ? "Paquetes"
+                            : "Visitas"}
+                  </button>
+                ),
+              )}
+            </div>
+            <button
+              className="db-btn-new-note"
+              onClick={() => setIsModalOpen(true)}
+            >
+              <FaPlus /> Nueva nota
+            </button>
+          </div>
+        </div>
+
+        {filteredNotes.length === 0 ? (
+          <div className="db-notes-empty">
+            <FaFileAlt />
+            <p>
+              No hay notas{" "}
+              {selectedFilter !== "all"
+                ? `en "${selectedFilter}"`
+                : "registradas"}
+            </p>
+          </div>
+        ) : (
+          <div className="notes-grid">
+            {filteredNotes.map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                onUpdate={handleUpdateNote}
+                onDelete={handleDeleteNote}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Modales */}
       <NoteModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveNote}
+      />
+
+      <InventoryRequest
+        isOpen={showInventory}
+        onClose={() => setShowInventory(false)}
+        maintenanceId={null}
+        currentUser={currentUser}
       />
     </div>
   );
