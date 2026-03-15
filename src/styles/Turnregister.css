@@ -964,6 +964,28 @@
     z-index: 999;
 }
 
+.btn-night-audit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(155, 127, 212, 0.15);
+    border: 1px solid rgba(155, 127, 212, 0.4);
+    border-radius: 8px;
+    color: #9B7FD4;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-night-audit:hover {
+    background: rgba(155, 127, 212, 0.28);
+    border-color: #9B7FD4;
+    transform: translateY(-1px);
+}
+
 .tr-toast.success {
     border-color: #4ade80;
     color: #4ade80;

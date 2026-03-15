@@ -14,6 +14,7 @@ import ShiftsScheduleManagement from './components/Shiftsschedulemanagement';
 import Maintenance from './components/Maintenance';
 import EmployeeManager from './components/EmployeeManager';
 import './styles/globalStyles.css';
+import InventoryManager from './components/InventoryManager';
 
 function App() {
   const [sidebarOpen,  setSidebarOpen] = useState(true);
@@ -111,6 +112,12 @@ function App() {
             <Maintenance currentUser={currentUser} />
           </ProtectedRoute>
         );
+      case 'inventario':
+        return (
+          <ProtectedRoute requiredPermission={PERMISSIONS.VIEW_INVENTORY} userRole={currentUser.role}>
+            <InventoryManager currentUser={currentUser} />
+          </ProtectedRoute>
+  );
 
       default:
         return <Dashboard />;

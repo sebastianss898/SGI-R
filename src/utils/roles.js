@@ -37,6 +37,8 @@ export const PERMISSIONS = {
   // Mantenimiento
   VIEW_MAINTENANCE: 'view_maintenance',
   CREATE_MAINTENANCE: 'create_maintenance',
+  VIEW_INVENTORY: 'view_inventory',
+  MANAGE_INVENTORY: 'manage_inventory',
   
   // Usuarios
   VIEW_USERS: 'view_users',
@@ -127,6 +129,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_ALERTS,
     PERMISSIONS.CREATE_ALERT,
     PERMISSIONS.VIEW_SHIFTS_SCHEDULE,
+    PERMISSIONS.VIEW_INVENTORY,
   ],
   
   [ROLES.MAINTENANCE]: [
@@ -136,6 +139,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_ALERTS,
     PERMISSIONS.CREATE_ALERT,
     PERMISSIONS.VIEW_SHIFTS_SCHEDULE,
+    PERMISSIONS.VIEW_INVENTORY,
   ],
 };
 
